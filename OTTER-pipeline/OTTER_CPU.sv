@@ -4,7 +4,7 @@
 // Engineer:  J. Callenes
 // 
 // Create Date: 01/04/2019 04:32:12 PM
-// Design Name: 
+// Design Name: Pipelined OTTER CPU
 // Module Name: OTTER_CPU
 // Project Name: 
 // Target Devices: 
@@ -31,7 +31,25 @@ module OTTER_MCU(input CLK,
                 input PROG_RX,  // ADDED PROG_RX FOR PROGRAMMER
                 output PROG_TX  // ADDED PROG_TX FOR PROGRAMMER
 );           
-
+    
+    // struct for storing a given pipeline stage's instruction and PC valeu
+    typedef struct packed{
+        opcode_t opcode;
+        logic [4:0] rs1_addr;
+        logic [4:0] rs2_addr;
+        logic [4:0] rd_addr;
+        logic rs1_used;
+        logic rs2_used;
+        logic rd_used;
+        logic [3:0] alu_fun;
+        logic memWrite;
+        logic memRead2;
+        logic regWrite;
+        logic [1:0] rf_wr_sel;
+        logic [2:0] mem_type;  //sign, size
+        logic [31:0] pc;
+    } instr_t;
+    
     // ************************ BEGIN PROGRAMMER ************************ 
 
     wire RESET;
@@ -53,6 +71,12 @@ module OTTER_MCU(input CLK,
 
     // ************************ END PROGRAMMER ************************ 
 
+    wire [63:0] IF_instr; // instruction stage instruction and PC
+    wire [63:0] ID_instr; // decode stage instruction and PC
+    wire [63:0] EX_instr; // execute stage instruction and PC
+    wire[63:0] MEM_instr; // memory stage instruction and PC
+    wire [63:0] WB_instr; // writeback stage instruction and PC
+    
     wire [6:0] opcode;
     wire [31:0] pc, pc_value, next_pc, jalr_pc, branch_pc, jump_pc, int_pc,A,B,
         I_immed,S_immed,U_immed,aluBin,aluAin,aluResult,rfIn,csr_reg, mem_data;
@@ -69,29 +93,14 @@ module OTTER_MCU(input CLK,
     wire mepcWrite, csrWrite,intCLR, mie, intTaken;
     wire [31:0] mepc, mtvec;
    
+//======================= FETCH STAGE ===========================//
 
+    // Register that outputs the instruction and PC of the instruction 
+    // in the fetch stage of the pipeline
+    Register IF_Register(.CLK(CLK), .EN(1), .DIN(IR), .DOUT(IF_instr), .RST(0));
+    
     assign opcode = IR[6:0]; // opcode shortcut
-    //PC is byte-addressed but our memory is word addressed 
-    ProgCount PC (.PC_CLK(CLK), .PC_RST(RESET), .PC_LD(pcWrite),
-                 .PC_DIN(pc_value), .PC_COUNT(pc));   
     
-    // Creates a 2-to-1 multiplexor used to select the source of the next PC
-    Mult6to1 PCdatasrc (next_pc, jalr_pc, branch_pc, jump_pc, mtvec, mepc, pc_sel, pc_value);
-    // Creates a 4-to-1 multiplexor used to select the B input of the ALU
-    Mult4to1 ALUBinput (B, I_immed, S_immed, pc, opB_sel, aluBin);
-    
-    Mult2to1 ALUAinput (A, U_immed, opA_sel, aluAin);
-    // Creates a RISC-V ALU
-    // Inputs are ALUCtl (the ALU control), ALU value inputs (ALUAin, ALUBin)
-    // Outputs are ALUResultOut (the 64-bit output) and Zero (zero detection output)
-    OTTER_ALU ALU (alu_fun, aluAin, aluBin, aluResult); // the ALU
-    
-    // Creates a RISC-V register file
-    OTTER_registerFile RF (IR[19:15], IR[24:20], IR[11:7], rfIn, regWrite, A, B, CLK); // Register file
- 
-    //Creates 4-to-1 multiplexor used to select reg write back data
-    Mult4to1 regWriteback (next_pc,csr_reg,mem_data,aluResult,wb_sel,rfIn);
-  
     //pc target calculations 
     assign next_pc = pc + 4;    //PC is byte aligned, memory is word aligned
     assign jalr_pc = I_immed + A;
@@ -99,6 +108,40 @@ module OTTER_MCU(input CLK,
     assign branch_pc = pc + {{20{IR[31]}},IR[7],IR[30:25],IR[11:8],1'b0};   //byte aligned addresses
     assign jump_pc = pc + {{12{IR[31]}}, IR[19:12], IR[20],IR[30:21],1'b0};
     assign int_pc = 0;
+     
+    //PC is byte-addressed but our memory is word addressed 
+    ProgCount PC (.PC_CLK(CLK), .PC_RST(RESET), .PC_LD(pcWrite),
+                 .PC_DIN(pc_value), .PC_COUNT(pc));   
+    
+    // Creates a 2-to-1 multiplexor used to select the source of the next PC
+    Mult6to1 PCdatasrc (next_pc, jalr_pc, branch_pc, jump_pc, mtvec, mepc, pc_sel, pc_value);
+
+//======================= DECODE STAGE ===========================//
+
+    // Register that outputs the instruction and PC of the instruction 
+    // in the decode stage of the pipeline
+    Register ID_Register(.CLK(CLK), .EN(1), .DIN(IF_instr), .DOUT(ID_instr), .RST(0));
+    
+    //CSR registers and interrupt logic
+    CSR CSRs(.clk(CLK),.rst(RESET),.intTaken(intTaken),.addr(IR[31:20]),.next_pc(pc),.wd(aluResult),.wr_en(csrWrite),
+           .rd(csr_reg),.mepc(mepc),.mtvec(mtvec),.mie(mie));
+    
+    //Creates 4-to-1 multiplexor used to select reg write back data
+    Mult4to1 regWriteback (next_pc,csr_reg,mem_data,aluResult,wb_sel,rfIn);
+           
+    // Creates a RISC-V register file
+    OTTER_registerFile RF (IR[19:15], IR[24:20], IR[11:7], rfIn, regWrite, A, B, CLK); // Register file
+    
+    // Instruction Decoder (TO BE REPLACED BY DECODERS IN EACH STAGE
+    OTTER_CU_Decoder CU_DECODER(.CU_OPCODE(opcode), .CU_FUNC3(IR[14:12]),.CU_FUNC7(IR[31:25]), 
+             .CU_BR_EQ(br_eq),.CU_BR_LT(br_lt),.CU_BR_LTU(br_ltu),.CU_PCSOURCE(pc_sel),
+             .CU_ALU_SRCA(opA_sel),.CU_ALU_SRCB(opB_sel),.CU_ALU_FUN(alu_fun),.CU_RF_WR_SEL(wb_sel),.intTaken(intTaken));
+
+    // Creates a 2-to-1 multiplexor used to select the A input of the ALU 
+    Mult2to1 ALUAinput (A, U_immed, opA_sel, aluAin);
+
+    // Creates a 4-to-1 multiplexor used to select the B input of the ALU
+    Mult4to1 ALUBinput (B, I_immed, S_immed, pc, opB_sel, aluBin);
     
     logic br_lt,br_eq,br_ltu;
     //Branch Condition Generator
@@ -114,6 +157,41 @@ module OTTER_MCU(input CLK,
     assign S_immed = {{20{IR[31]}},IR[31:25],IR[11:7]};
     assign I_immed = {{20{IR[31]}},IR[31:20]};
     assign U_immed = {IR[31:12],{12{1'b0}}};
+    
+//======================= EXECUTE STAGE ===========================//
+
+    // Register that outputs the instruction and PC of the instruction 
+    // in the execute stage of the pipeline
+    Register EX_Register(.CLK(CLK), .EN(1), .DIN(ID_instr), .DOUT(EX_instr), .RST(0));
+    
+    // Creates a RISC-V ALU
+    // Inputs are ALUCtl (the ALU control), ALU value inputs (ALUAin, ALUBin)
+    // Outputs are ALUResultOut (the 64-bit output) and Zero (zero detection output)
+    OTTER_ALU ALU (alu_fun, aluAin, aluBin, aluResult); // the ALU
+    
+//======================= MEMORY STAGE ===========================//
+    
+    // Register that outputs the instruction and PC of the instruction 
+    // in the memory stage of the pipeline
+    Register WB_Register(.CLK(CLK), .EN(1), .DIN(EX_instr), .DOUT(MEM_instr), .RST(0));
+    
+    OTTER_mem_byte #(14) memory  (.MEM_CLK(CLK),.MEM_ADDR1(pc),.MEM_ADDR2(mem_addr_after),.MEM_DIN2(mem_data_after),
+                               .MEM_WRITE2(mem_we_after),.MEM_READ1(memRead1),.MEM_READ2(memRead2),
+                               .ERR(),.MEM_DOUT1(IR),.MEM_DOUT2(mem_data),.IO_IN(IOBUS_IN),.IO_WR(IOBUS_WR),.MEM_SIZE(mem_size_after),.MEM_SIGN(mem_sign_after));
+                               
+//======================= WRITEBACK STAGE ===========================//
+
+    // Register that outputs the instruction and PC of the instruction 
+    // in the writeback stage of the pipeline
+    Register WB_Register(.CLK(CLK), .EN(1), .DIN(MEM_instr), .DOUT(WB_instr), .RST(0));
+    
+// Writeback Decoder to go here
+// Technically, the writeback stage uses the register file since it writes back to the registers 
+    
+  
+    
+    
+    
 
     // ************************ BEGIN PROGRAMMER ************************ 
 
@@ -126,37 +204,31 @@ module OTTER_MCU(input CLK,
 
     // ************************ END PROGRAMMER ************************               
                            
-     OTTER_mem_byte #(14) memory  (.MEM_CLK(CLK),.MEM_ADDR1(pc),.MEM_ADDR2(mem_addr_after),.MEM_DIN2(mem_data_after),
-                               .MEM_WRITE2(mem_we_after),.MEM_READ1(memRead1),.MEM_READ2(memRead2),
-                               .ERR(),.MEM_DOUT1(IR),.MEM_DOUT2(mem_data),.IO_IN(IOBUS_IN),.IO_WR(IOBUS_WR),.MEM_SIZE(mem_size_after),.MEM_SIGN(mem_sign_after));
     // ^ CHANGED aluResult to mem_addr_after FOR PROGRAMMER
     // ^ CHANGED B to mem_data_after FOR PROGRAMMER
     // ^ CHANGED memWrite to mem_we_after FOR PROGRAMMER
     // ^ CHANGED IR[13:12] to mem_size_after FOR PROGRAMMER
     // ^ CHANGED IR[14] to mem_sign_after FOR PROGRAMMER
      
-     OTTER_CU_Decoder CU_DECODER(.CU_OPCODE(opcode), .CU_FUNC3(IR[14:12]),.CU_FUNC7(IR[31:25]), 
-             .CU_BR_EQ(br_eq),.CU_BR_LT(br_lt),.CU_BR_LTU(br_ltu),.CU_PCSOURCE(pc_sel),
-             .CU_ALU_SRCA(opA_sel),.CU_ALU_SRCB(opB_sel),.CU_ALU_FUN(alu_fun),.CU_RF_WR_SEL(wb_sel),.intTaken(intTaken));
-            
-     logic prev_INT=0;
      
-     OTTER_CU_FSM CU_FSM (.CU_CLK(CLK), .CU_INT(INTR), .CU_RESET(RESET), .CU_OPCODE(opcode), //.CU_OPCODE(opcode),
-                     .CU_FUNC3(IR[14:12]),.CU_FUNC12(IR[31:20]),
-                     .CU_PCWRITE(pcWrite), .CU_REGWRITE(regWrite), .CU_MEMWRITE(memWrite), 
-                     .CU_MEMREAD1(memRead1),.CU_MEMREAD2(memRead2),.CU_intTaken(intTaken),.CU_intCLR(intCLR),.CU_csrWrite(csrWrite),.CU_prevINT(prev_INT));
+     //==== THE FSM WILL HAVE TO BE REPLACED BY DECODERS IN EACH STAGE ====//
+     
+     //logic prev_INT=0;
+     
+//     OTTER_CU_FSM CU_FSM (.CU_CLK(CLK), .CU_INT(INTR), .CU_RESET(RESET), .CU_OPCODE(opcode), //.CU_OPCODE(opcode),
+//                     .CU_FUNC3(IR[14:12]),.CU_FUNC12(IR[31:20]),
+//                     .CU_PCWRITE(pcWrite), .CU_REGWRITE(regWrite), .CU_MEMWRITE(memWrite), 
+//                     .CU_MEMREAD1(memRead1),.CU_MEMREAD2(memRead2),.CU_intTaken(intTaken),.CU_intCLR(intCLR),.CU_csrWrite(csrWrite),.CU_prevINT(prev_INT));
     
-    //CSR registers and interrupt logic
-     CSR CSRs(.clk(CLK),.rst(RESET),.intTaken(intTaken),.addr(IR[31:20]),.next_pc(pc),.wd(aluResult),.wr_en(csrWrite),
-           .rd(csr_reg),.mepc(mepc),.mtvec(mtvec),.mie(mie));
     
-    always_ff @ (posedge CLK)
-    begin
-         if(INTR && mie)
-            prev_INT=1'b1;
-         if(intCLR || RESET)
-            prev_INT=1'b0;
-    end
+    
+//    always_ff @ (posedge CLK)
+//    begin
+//         if(INTR && mie)
+//            prev_INT=1'b1;
+//         if(intCLR || RESET)
+//            prev_INT=1'b0;
+//    end
     //MMIO /////////////////////////////////////////////////////           
     assign IOBUS_ADDR = mem_addr_after;  // CHANGED FROM aluResult TO mem_addr_after FOR PROGRAMMER
     assign IOBUS_OUT = mem_data_after;  // CHANGED FROM B TO mem_data_after FOR PROGRAMMER 
