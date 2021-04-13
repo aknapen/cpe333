@@ -32,21 +32,27 @@ module OTTER_MCU(input CLK,
                 output PROG_TX  // ADDED PROG_TX FOR PROGRAMMER
 );           
     
-    // struct for storing a given pipeline stage's instruction and PC valeu
-    typedef struct packed{
-        opcode_t opcode;
-        logic [4:0] rs1_addr;
-        logic [4:0] rs2_addr;
-        logic [4:0] rd_addr;
-        logic rs1_used;
-        logic rs2_used;
-        logic rd_used;
-        logic [3:0] alu_fun;
-        logic memWrite;
-        logic memRead2;
-        logic regWrite;
-        logic [1:0] rf_wr_sel;
-        logic [2:0] mem_type;  //sign, size
+    // struct for storing a given pipeline stage's instruction and PC value\
+    // I don't think this will be very helpful because it doesn't handle IMM values
+//    typedef struct packed{
+//        opcode_t opcode;
+//        logic [4:0] rs1_addr;
+//        logic [4:0] rs2_addr;
+//        logic [4:0] rd_addr;
+//        logic rs1_used;
+//        logic rs2_used;
+//        logic rd_used;
+//        logic [3:0] alu_fun;
+//        logic memWrite;
+//        logic memRead2;
+//        logic regWrite;
+//        logic [1:0] rf_wr_sel;
+//        logic [2:0] mem_type;  //sign, size
+//        logic [31:0] pc;
+//    } instr_t;
+    
+    typedef struct packed {
+        logic [31:0] instr;
         logic [31:0] pc;
     } instr_t;
     
@@ -95,12 +101,12 @@ module OTTER_MCU(input CLK,
    
 //======================= FETCH STAGE ===========================//
 
+// No need for a decoder here yet I think, since there are no hazards yet?
+
     // Register that outputs the instruction and PC of the instruction 
     // in the fetch stage of the pipeline
     Register IF_Register(.CLK(CLK), .EN(1), .DIN(IR), .DOUT(IF_instr), .RST(0));
-    
-    assign opcode = IR[6:0]; // opcode shortcut
-    
+        
     //pc target calculations 
     assign next_pc = pc + 4;    //PC is byte aligned, memory is word aligned
     assign jalr_pc = I_immed + A;
@@ -108,13 +114,33 @@ module OTTER_MCU(input CLK,
     assign branch_pc = pc + {{20{IR[31]}},IR[7],IR[30:25],IR[11:8],1'b0};   //byte aligned addresses
     assign jump_pc = pc + {{12{IR[31]}}, IR[19:12], IR[20],IR[30:21],1'b0};
     assign int_pc = 0;
+    
+    // Creates a 2-to-1 multiplexor used to select the source of the next PC
+    Mult6to1 PCdatasrc (next_pc, jalr_pc, branch_pc, jump_pc, mtvec, mepc, pc_sel, pc_value);
+    
+    
+    assign pcWrite = 1; // since there will be no hazards, can write new PC value every CLK cycle
      
     //PC is byte-addressed but our memory is word addressed 
     ProgCount PC (.PC_CLK(CLK), .PC_RST(RESET), .PC_LD(pcWrite),
                  .PC_DIN(pc_value), .PC_COUNT(pc));   
     
-    // Creates a 2-to-1 multiplexor used to select the source of the next PC
-    Mult6to1 PCdatasrc (next_pc, jalr_pc, branch_pc, jump_pc, mtvec, mepc, pc_sel, pc_value);
+//    assign IF_instr.opcode = IR[6:0]; 
+//    assign IF_instr.rs1_addr = IR[19:15];
+//    assign IF_instr.rs2_addr = IR[24:20];
+//    assign IF_instr.rd_addr = IR[11:7];
+//    assign IF_instr.rs1_used =  ((IF_instr.opcode != LUI) && // only the LUI, AUIPC, and JAL instructions don't use an rs1
+//                                 (IF_instr.opcode != AUIPC) && 
+//                                 (IF_instr.opcode != JAL)) ? 1 : 0;
+//    assign IF_instr.rs2_used = ((IF_instr.opcode == BRANCH) || // only BRANCH, STORE, and OP instruction use rs2
+//                                (IF_instr.opcode == STORE) ||
+//                                (IF_instr.opcode == OP)) ? 1 : 0;
+//    assign IF_instr.rd_used = ((IF_instr.opcode != BRANCH) && // only BRANCH and STORE instructions don't use an rd
+//                               (IF_instr.opcode != STORE)) ? 1 : 0; 
+
+    assign IF_instr.instr = IR; // output of instruction segment of memory
+    assign IF_instr.pc = pc; // output of the PC
+                                
 
 //======================= DECODE STAGE ===========================//
 
