@@ -71,15 +71,22 @@ module OTTER_MCU(input CLK,
 
     // ************************ END PROGRAMMER ************************ 
 
-    logic [63:0] EX_instr; // execute stage instruction and PC
-    logic [63:0] MEM_instr; // memory stage instruction and PC
-    logic [63:0] WB_instr; // writeback stage instruction and PC
+    instr_t DE_EX_instr;
+    instr_t EX_MEM_instr;
+    instr_t MEM_WB_instr;
     
-    wire [6:0] opcode;
+    always_ff @(posedge CLK) // to push intsr_t through the pipeline stages
+    begin
+        EX_MEM_instr <= DE_EX_instr;
+        MEM_WB_instr <= EX_MEM_instr;
+    end
+    
+    logic [31:0] IF_ID_pc;
+    
     wire [31:0] pc, pc_value, next_pc, jalr_pc, branch_pc, jump_pc, int_pc,A,B,
         I_immed,S_immed,U_immed,aluBin,aluAin,aluResult,rfIn,csr_reg, mem_data;
     
-    wire [31:0] IR;
+    
     wire memRead1,memRead2;
     
     wire pcWrite,regWrite,memWrite, op1_sel,mem_op,IorD,pcWriteCond,memRead;
@@ -92,7 +99,7 @@ module OTTER_MCU(input CLK,
     wire [31:0] mepc, mtvec;
    
 //======================= FETCH STAGE ===========================//
-
+       
     // Register that outputs the instruction and PC of the instruction 
     // in the fetch stage of the pipeline
 //    Register IF_Register(.CLK(CLK), .EN(1), .DIN(IR), .DOUT(IF_instr), .RST(0));
@@ -108,18 +115,18 @@ module OTTER_MCU(input CLK,
                  .PC_DIN(pc_value), .PC_COUNT(pc));   
                                 
     assign memRead1 = 1; // can hardcode this to 1 since we always want to read an instr in the fetch stage
-//======================= DECODE STAGE ===========================//
-
-    logic [31:0] IF_ID_instr;
-    logic [31:0] IF_ID_pc;
-    
-    instr_t ID_instr; // decode stage instruction and PC
-    
-    always_ff @(posedge CLK) // transfers instr and PC from fetch to decode
+   
+    // PC REGISTER
+    always_ff @(posedge CLK) // transfers PC from fetch to decode
     begin
-        IF_ID_instr = IR; // get instruction from fetch stage
-        IF_ID_pc = pc; // get PC from fetch stage
+        IF_ID_pc <= pc; // delay PC from fetch stage
     end
+    
+   //======================= DECODE STAGE ===========================//
+
+    logic [31:0] IR; // instruction from fetch stage
+    logic [6:0] opcode; // for opcode from IR
+    
     
 //    ID_instr.opcode = IF_ID_instr[6:0]; 
 //    ID_instr.rs1_addr = IF_ID_instr[19:15];
@@ -152,12 +159,21 @@ module OTTER_MCU(input CLK,
     OTTER_CU_Decoder CU_DECODER(.CU_OPCODE(opcode), .CU_FUNC3(IR[14:12]),.CU_FUNC7(IR[31:25]), 
              .CU_BR_EQ(br_eq),.CU_BR_LT(br_lt),.CU_BR_LTU(br_ltu),.CU_PCSOURCE(pc_sel),
              .CU_ALU_SRCA(opA_sel),.CU_ALU_SRCB(opB_sel),.CU_ALU_FUN(alu_fun),.CU_RF_WR_SEL(wb_sel),.intTaken(intTaken));    
+    
+    assign DE_EX_instr.pc = IF_ID_pc; // get pc value from fetch stage
+    
+    // Assign relevant outputs of the Decoder module here
+    assign DE_EX_instr.opcode = opcode;
+    // ...
                                
     // Creates a 2-to-1 multiplexor used to select the A input of the ALU 
     Mult2to1 ALUAinput (A, U_immed, opA_sel, aluAin);
 
     // Creates a 4-to-1 multiplexor used to select the B input of the ALU
     Mult4to1 ALUBinput (B, I_immed, S_immed, pc, opB_sel, aluBin);
+    
+    // Assign relevant inputs to the ALU module here
+    // ...
     
     // Generate immediates
     assign S_immed = {{20{IR[31]}},IR[31:25],IR[11:7]};
