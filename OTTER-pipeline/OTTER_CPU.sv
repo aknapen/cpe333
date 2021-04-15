@@ -33,26 +33,20 @@ module OTTER_MCU(input CLK,
 );           
     
     // struct for storing a given pipeline stage's instruction and PC value\
-    // I don't think this will be very helpful because it doesn't handle IMM values
-//    typedef struct packed{
-//        opcode_t opcode;
-//        logic [4:0] rs1_addr;
-//        logic [4:0] rs2_addr;
-//        logic [4:0] rd_addr;
-//        logic rs1_used;
-//        logic rs2_used;
-//        logic rd_used;
-//        logic [3:0] alu_fun;
-//        logic memWrite;
-//        logic memRead2;
-//        logic regWrite;
-//        logic [1:0] rf_wr_sel;
-//        logic [2:0] mem_type;  //sign, size
-//        logic [31:0] pc;
-//    } instr_t;
-    
-    typedef struct packed {
-        logic [31:0] instr;
+    typedef struct packed{
+        opcode_t opcode;
+        logic [4:0] rs1_addr;
+        logic [4:0] rs2_addr;
+        logic [4:0] rd_addr;
+        logic rs1_used;
+        logic rs2_used;
+        logic rd_used;
+        logic [3:0] alu_fun;
+        logic memWrite;
+        logic memRead2;
+        logic regWrite;
+        logic [1:0] rf_wr_sel;
+        logic [2:0] mem_type;  //sign, size
         logic [31:0] pc;
     } instr_t;
     
@@ -77,11 +71,9 @@ module OTTER_MCU(input CLK,
 
     // ************************ END PROGRAMMER ************************ 
 
-    wire [63:0] IF_instr; // instruction stage instruction and PC
-    wire [63:0] ID_instr; // decode stage instruction and PC
-    wire [63:0] EX_instr; // execute stage instruction and PC
-    wire[63:0] MEM_instr; // memory stage instruction and PC
-    wire [63:0] WB_instr; // writeback stage instruction and PC
+    logic [63:0] EX_instr; // execute stage instruction and PC
+    logic [63:0] MEM_instr; // memory stage instruction and PC
+    logic [63:0] WB_instr; // writeback stage instruction and PC
     
     wire [6:0] opcode;
     wire [31:0] pc, pc_value, next_pc, jalr_pc, branch_pc, jump_pc, int_pc,A,B,
@@ -101,19 +93,9 @@ module OTTER_MCU(input CLK,
    
 //======================= FETCH STAGE ===========================//
 
-// No need for a decoder here yet I think, since there are no hazards yet?
-
     // Register that outputs the instruction and PC of the instruction 
     // in the fetch stage of the pipeline
-    Register IF_Register(.CLK(CLK), .EN(1), .DIN(IR), .DOUT(IF_instr), .RST(0));
-        
-    //pc target calculations 
-    assign next_pc = pc + 4;    //PC is byte aligned, memory is word aligned
-    assign jalr_pc = I_immed + A;
-    //assign branch_pc = pc + {{21{IR[31]}},IR[7],IR[30:25],IR[11:8] ,1'b0};   //word aligned addresses
-    assign branch_pc = pc + {{20{IR[31]}},IR[7],IR[30:25],IR[11:8],1'b0};   //byte aligned addresses
-    assign jump_pc = pc + {{12{IR[31]}}, IR[19:12], IR[20],IR[30:21],1'b0};
-    assign int_pc = 0;
+//    Register IF_Register(.CLK(CLK), .EN(1), .DIN(IR), .DOUT(IF_instr), .RST(0));
     
     // Creates a 2-to-1 multiplexor used to select the source of the next PC
     Mult6to1 PCdatasrc (next_pc, jalr_pc, branch_pc, jump_pc, mtvec, mepc, pc_sel, pc_value);
@@ -124,60 +106,58 @@ module OTTER_MCU(input CLK,
     //PC is byte-addressed but our memory is word addressed 
     ProgCount PC (.PC_CLK(CLK), .PC_RST(RESET), .PC_LD(pcWrite),
                  .PC_DIN(pc_value), .PC_COUNT(pc));   
-    
-//    assign IF_instr.opcode = IR[6:0]; 
-//    assign IF_instr.rs1_addr = IR[19:15];
-//    assign IF_instr.rs2_addr = IR[24:20];
-//    assign IF_instr.rd_addr = IR[11:7];
-//    assign IF_instr.rs1_used =  ((IF_instr.opcode != LUI) && // only the LUI, AUIPC, and JAL instructions don't use an rs1
-//                                 (IF_instr.opcode != AUIPC) && 
-//                                 (IF_instr.opcode != JAL)) ? 1 : 0;
-//    assign IF_instr.rs2_used = ((IF_instr.opcode == BRANCH) || // only BRANCH, STORE, and OP instruction use rs2
-//                                (IF_instr.opcode == STORE) ||
-//                                (IF_instr.opcode == OP)) ? 1 : 0;
-//    assign IF_instr.rd_used = ((IF_instr.opcode != BRANCH) && // only BRANCH and STORE instructions don't use an rd
-//                               (IF_instr.opcode != STORE)) ? 1 : 0; 
-
-    assign IF_instr.instr = IR; // output of instruction segment of memory
-    assign IF_instr.pc = pc; // output of the PC
                                 
-
+    assign memRead1 = 1; // can hardcode this to 1 since we always want to read an instr in the fetch stage
 //======================= DECODE STAGE ===========================//
 
+    logic [31:0] IF_ID_instr;
+    logic [31:0] IF_ID_pc;
+    
+    instr_t ID_instr; // decode stage instruction and PC
+    
+    always_ff @(posedge CLK) // transfers instr and PC from fetch to decode
+    begin
+        IF_ID_instr = IR; // get instruction from fetch stage
+        IF_ID_pc = pc; // get PC from fetch stage
+    end
+    
+//    ID_instr.opcode = IF_ID_instr[6:0]; 
+//    ID_instr.rs1_addr = IF_ID_instr[19:15];
+//    ID_instr.rs2_addr = IF_ID_instr[24:20];
+//    ID_instr.rd_addr = IF_ID_instr[11:7];
+//    ID_instr.rs1_used =  ((ID_instr.opcode != LUI) && // only the LUI, AUIPC, and JAL instructions don't use an rs1
+//                                 (ID_instr.opcode != AUIPC) && 
+//                                 (ID_instr.opcode != JAL)) ? 1 : 0;
+//    ID_instr.rs2_used = ((ID_instr.opcode == BRANCH) || // only BRANCH, STORE, and OP instruction use rs2
+//                                (ID_instr.opcode == STORE) ||
+//                                (ID_instr.opcode == OP)) ? 1 : 0;
+//    ID_instr.rd_used = ((ID_instr.opcode != BRANCH) && // only BRANCH and STORE instructions don't use an rd
+//                               (ID_instr.opcode != STORE)) ? 1 : 0;
+//    ID_instr.alu_fun = {IR[30], IR[14:12]}; // alu function takes funct7[5] concatenated with func3
+//    ID_instr.memWrite = ;
+//    ID_instr.memRead = ;
+//    ID_instr.regWrite = ;
+//    ID_instr.rf_wr_sel = ;
+//    ID_instr.mem_type = ;
+//    ID_instr.pc = IF_ID_pc;   
+                            
     // Register that outputs the instruction and PC of the instruction 
     // in the decode stage of the pipeline
     Register ID_Register(.CLK(CLK), .EN(1), .DIN(IF_instr), .DOUT(ID_instr), .RST(0));
-    
-    //CSR registers and interrupt logic
-    CSR CSRs(.clk(CLK),.rst(RESET),.intTaken(intTaken),.addr(IR[31:20]),.next_pc(pc),.wd(aluResult),.wr_en(csrWrite),
-           .rd(csr_reg),.mepc(mepc),.mtvec(mtvec),.mie(mie));
-    
-    //Creates 4-to-1 multiplexor used to select reg write back data
-    Mult4to1 regWriteback (next_pc,csr_reg,mem_data,aluResult,wb_sel,rfIn);
            
     // Creates a RISC-V register file
     OTTER_registerFile RF (IR[19:15], IR[24:20], IR[11:7], rfIn, regWrite, A, B, CLK); // Register file
     
-    // Instruction Decoder (TO BE REPLACED BY DECODERS IN EACH STAGE
+    // Instruction Decoder
     OTTER_CU_Decoder CU_DECODER(.CU_OPCODE(opcode), .CU_FUNC3(IR[14:12]),.CU_FUNC7(IR[31:25]), 
              .CU_BR_EQ(br_eq),.CU_BR_LT(br_lt),.CU_BR_LTU(br_ltu),.CU_PCSOURCE(pc_sel),
-             .CU_ALU_SRCA(opA_sel),.CU_ALU_SRCB(opB_sel),.CU_ALU_FUN(alu_fun),.CU_RF_WR_SEL(wb_sel),.intTaken(intTaken));
-
+             .CU_ALU_SRCA(opA_sel),.CU_ALU_SRCB(opB_sel),.CU_ALU_FUN(alu_fun),.CU_RF_WR_SEL(wb_sel),.intTaken(intTaken));    
+                               
     // Creates a 2-to-1 multiplexor used to select the A input of the ALU 
     Mult2to1 ALUAinput (A, U_immed, opA_sel, aluAin);
 
     // Creates a 4-to-1 multiplexor used to select the B input of the ALU
     Mult4to1 ALUBinput (B, I_immed, S_immed, pc, opB_sel, aluBin);
-    
-    logic br_lt,br_eq,br_ltu;
-    //Branch Condition Generator
-    always_comb
-    begin
-        br_lt=0; br_eq=0; br_ltu=0;
-        if($signed(A) < $signed(B)) br_lt=1;
-        if(A==B) br_eq=1;
-        if(A<B) br_ltu=1;
-    end
     
     // Generate immediates
     assign S_immed = {{20{IR[31]}},IR[31:25],IR[11:7]};
@@ -190,6 +170,24 @@ module OTTER_MCU(input CLK,
     // in the execute stage of the pipeline
     Register EX_Register(.CLK(CLK), .EN(1), .DIN(ID_instr), .DOUT(EX_instr), .RST(0));
     
+    //pc target calculations 
+    assign next_pc = pc + 4;    //PC is byte aligned, memory is word aligned
+    assign jalr_pc = I_immed + A;
+    //assign branch_pc = pc + {{21{IR[31]}},IR[7],IR[30:25],IR[11:8] ,1'b0};   //word aligned addresses
+    assign branch_pc = pc + {{20{IR[31]}},IR[7],IR[30:25],IR[11:8],1'b0};   //byte aligned addresses
+    assign jump_pc = pc + {{12{IR[31]}}, IR[19:12], IR[20],IR[30:21],1'b0};
+    assign int_pc = 0;
+    
+    logic br_lt,br_eq,br_ltu;
+    //Branch Condition Generator
+    always_comb
+    begin
+        br_lt=0; br_eq=0; br_ltu=0;
+        if($signed(A) < $signed(B)) br_lt=1;
+        if(A==B) br_eq=1;
+        if(A<B) br_ltu=1;
+    end
+    
     // Creates a RISC-V ALU
     // Inputs are ALUCtl (the ALU control), ALU value inputs (ALUAin, ALUBin)
     // Outputs are ALUResultOut (the 64-bit output) and Zero (zero detection output)
@@ -199,7 +197,7 @@ module OTTER_MCU(input CLK,
     
     // Register that outputs the instruction and PC of the instruction 
     // in the memory stage of the pipeline
-    Register WB_Register(.CLK(CLK), .EN(1), .DIN(EX_instr), .DOUT(MEM_instr), .RST(0));
+    Register MEM_Register(.CLK(CLK), .EN(1), .DIN(EX_instr), .DOUT(MEM_instr), .RST(0));
     
     OTTER_mem_byte #(14) memory  (.MEM_CLK(CLK),.MEM_ADDR1(pc),.MEM_ADDR2(mem_addr_after),.MEM_DIN2(mem_data_after),
                                .MEM_WRITE2(mem_we_after),.MEM_READ1(memRead1),.MEM_READ2(memRead2),
@@ -214,9 +212,12 @@ module OTTER_MCU(input CLK,
 // Writeback Decoder to go here
 // Technically, the writeback stage uses the register file since it writes back to the registers 
     
-  
+    //CSR registers and interrupt logic
+    CSR CSRs(.clk(CLK),.rst(RESET),.intTaken(intTaken),.addr(IR[31:20]),.next_pc(pc),.wd(aluResult),.wr_en(csrWrite),
+           .rd(csr_reg),.mepc(mepc),.mtvec(mtvec),.mie(mie));  
     
-    
+    //Creates 4-to-1 multiplexor used to select reg write back data
+    Mult4to1 regWriteback (next_pc,csr_reg,mem_data,aluResult,wb_sel,rfIn);
     
 
     // ************************ BEGIN PROGRAMMER ************************ 
