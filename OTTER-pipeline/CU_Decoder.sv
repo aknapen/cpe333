@@ -24,15 +24,15 @@ module OTTER_CU_Decoder(
     input [6:0] CU_OPCODE,
     input [2:0] CU_FUNC3,
     input [6:0] CU_FUNC7,
-    input CU_BR_EQ,
-    input CU_BR_LT,
-    input CU_BR_LTU,
+//    input CU_BR_EQ,   // Moving Branch condition generation to the execute stage
+//    input CU_BR_LT,
+//    input CU_BR_LTU,
     input intTaken,
     output logic CU_ALU_SRCA,
     output logic [1:0] CU_ALU_SRCB,
     output logic [3:0] CU_ALU_FUN,
     output logic [1:0] CU_RF_WR_SEL,   
-    output logic [3:0] CU_PCSOURCE
+//    output logic [3:0] CU_PCSOURCE // Moving PC_Source Generation to the Execute stage
     //output logic [1:0] CU_MSIZE
    );
         typedef enum logic [6:0] {
@@ -63,7 +63,7 @@ module OTTER_CU_Decoder(
         opcode_t OPCODE;
         assign OPCODE = opcode_t'(CU_OPCODE);
         
-        logic brn_cond;
+//        logic brn_cond;
         //DECODING  (does not depend on state)  ////////////////////////////////////////////
        //SEPERATE DECODER
        // assign CU_ALU_FUN = (CU_OPCODE!=LUI)? (CU_OPCODE== )? {CU_FUNC7[5],CU_FUNC3}:4'b1001 ;
@@ -78,16 +78,17 @@ module OTTER_CU_Decoder(
                 default: CU_ALU_FUN = 4'b0;
             endcase
             
-            always_comb
-            case(CU_FUNC3)
-                        3'b000: brn_cond = CU_BR_EQ;     //BEQ 
-                        3'b001: brn_cond = ~CU_BR_EQ;    //BNE
-                        3'b100: brn_cond = CU_BR_LT;     //BLT
-                        3'b101: brn_cond = ~CU_BR_LT;    //BGE
-                        3'b110: brn_cond = CU_BR_LTU;    //BLTU
-                        3'b111: brn_cond = ~CU_BR_LTU;   //BGEU
-                        default: brn_cond =0;
-            endcase
+            // Moving branch condition generating to the execute stage
+//            always_comb
+//            case(CU_FUNC3)
+//                        3'b000: brn_cond = CU_BR_EQ;     //BEQ 
+//                        3'b001: brn_cond = ~CU_BR_EQ;    //BNE
+//                        3'b100: brn_cond = CU_BR_LT;     //BLT
+//                        3'b101: brn_cond = ~CU_BR_LT;    //BGE
+//                        3'b110: brn_cond = CU_BR_LTU;    //BLTU
+//                        3'b111: brn_cond = ~CU_BR_LTU;   //BGEU
+//                        default: brn_cond =0;
+//            endcase
             
          always_comb
          begin
@@ -117,17 +118,18 @@ module OTTER_CU_Decoder(
           //else CU_ALU_SRCB=3;
          end
          
-         always_comb begin
-                case(CU_OPCODE)
-                    JAL: CU_PCSOURCE =3'b011;
-                    JALR: CU_PCSOURCE=3'b001;
-                    BRANCH: CU_PCSOURCE=(brn_cond)?3'b010:2'b000;
-                    SYSTEM: CU_PCSOURCE = (CU_FUNC3==Func3_PRIV)? 3'b101:3'b000;
-                    default: CU_PCSOURCE=3'b000; 
-                endcase
-                if(intTaken)    
-                    CU_PCSOURCE=3'b100;   
-        end
+         // Moving PC_SOURCE assignment to Execute stage (Branch Condition Generator)
+//         always_comb begin
+//                case(CU_OPCODE)
+//                    JAL: CU_PCSOURCE =3'b011;
+//                    JALR: CU_PCSOURCE=3'b001;
+//                    BRANCH: CU_PCSOURCE=(brn_cond)?3'b010:2'b000;
+//                    SYSTEM: CU_PCSOURCE = (CU_FUNC3==Func3_PRIV)? 3'b101:3'b000;
+//                    default: CU_PCSOURCE=3'b000; 
+//                endcase
+//                if(intTaken)    
+//                    CU_PCSOURCE=3'b100;   
+//        end
          
         
        assign CU_ALU_SRCA = (CU_OPCODE==LUI || CU_OPCODE==AUIPC) ? 1 : 0;

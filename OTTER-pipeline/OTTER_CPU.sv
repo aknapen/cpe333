@@ -83,18 +83,17 @@ module OTTER_MCU(input CLK,
     
     wire memRead1,memRead2;
     
-    wire pcWrite,regWrite,memWrite, op1_sel,mem_op,IorD,pcWriteCond,memRead;
-    wire [1:0] opB_sel, rf_sel, wb_sel, mSize;
+    wire regWrite, memWrite;
+    wire [1:0] wb_sel;
     wire [3:0] pc_sel;
     wire [3:0]alu_fun;
-    wire opA_sel;
-    
+        
     wire mepcWrite, csrWrite,intCLR, mie, intTaken;
     wire [31:0] mepc, mtvec;
    
 //======================= FETCH STAGE ===========================//
        
-    
+    logic pcWrite;
     // Creates a 2-to-1 multiplexor used to select the source of the next PC
     Mult6to1 PCdatasrc (next_pc, jalr_pc, branch_pc, jump_pc, mtvec, mepc, pc_sel, pc_value); // TODO: need to clk pc_sel from Decode stage???
     
@@ -118,14 +117,15 @@ module OTTER_MCU(input CLK,
     logic [31:0] IR; // instruction from fetch stage
     logic [6:0] opcode; // for opcode from IR
     logic [31:0] DE_A, DE_B; // inputs A and B that will be sent to the Execute Stage
+    logic opA_sel, opB_sel; // select bits for registers A and B MUXes
            
     // Creates a RISC-V register file
     OTTER_registerFile RF (IR[19:15], IR[24:20], IR[11:7], rfIn, regWrite, A, B, CLK); // Register file
     
     // Instruction Decoder
     OTTER_CU_Decoder CU_DECODER(.CU_OPCODE(opcode), .CU_FUNC3(IR[14:12]),.CU_FUNC7(IR[31:25]), 
-             .CU_BR_EQ(br_eq),.CU_BR_LT(br_lt),.CU_BR_LTU(br_ltu),.CU_PCSOURCE(pc_sel),
-             .CU_ALU_SRCA(opA_sel),.CU_ALU_SRCB(opB_sel),.CU_ALU_FUN(alu_fun),.CU_RF_WR_SEL(wb_sel),.intTaken(intTaken));    
+             .CU_ALU_SRCA(opA_sel), .CU_ALU_SRCB(opB_sel),.CU_ALU_FUN(alu_fun),.CU_RF_WR_SEL(wb_sel),
+             .intTaken(intTaken));    
         
     // Assign relevant outputs passed through the DE_EX register here
     assign DE_EX_instr.opcode = opcode;
