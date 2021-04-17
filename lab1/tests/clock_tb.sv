@@ -31,5 +31,5 @@ module clock_tb();
     end
     
     //if your clock signal in OTTER_Wrapper is named something other than "CLK", change it here
-    OTTER_Wrapper OTTER_Wrapper(.CLK(clk));
+    OTTER_Wrapper_Programmable DUT(.CLK(clk));
 endmodule

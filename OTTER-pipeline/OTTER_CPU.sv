@@ -75,50 +75,54 @@ module OTTER_MCU(input CLK,
     instr_t EX_MEM_instr;
     instr_t MEM_WB_instr;
     
+    logic [31:0] ID_EX_IR;
     logic [31:0] IF_ID_pc;
     
-    wire [31:0] pc, pc_value, next_pc, jalr_pc, branch_pc, jump_pc, int_pc,
-        I_immed,S_immed,U_immed,aluBin,aluAin,aluResult,rfIn,csr_reg, mem_data;
+    wire [31:0] I_immed,S_immed,U_immed,aluBin,aluAin,rfIn,csr_reg, mem_data;
     
     
     wire memRead1,memRead2;
     
     wire regWrite, memWrite;
     wire [1:0] wb_sel;
-    wire [3:0] pc_sel;
-    wire [3:0]alu_fun;
         
     wire mepcWrite, csrWrite,intCLR, mie, intTaken;
     wire [31:0] mepc, mtvec;
    
-//======================= FETCH STAGE ===========================//
-       
+//=======================  BEGIN FETCH STAGE ===========================//
+    
+    logic [31:0] pc_in, pc_out, next_pc, jalr_pc, branch_pc, jump_pc, int_pc;   
     logic pcWrite;
+    logic [2:0] pc_source;
+    
     // Creates a 2-to-1 multiplexor used to select the source of the next PC
-    Mult6to1 PCdatasrc (next_pc, jalr_pc, branch_pc, jump_pc, mtvec, mepc, pc_sel, pc_value); // TODO: need to clk pc_sel from Decode stage???
+    Mult6to1 PCdatasrc (next_pc, jalr_pc, branch_pc, jump_pc, mtvec, mepc, pc_source, pc_in); // TODO: need to clk pc_sel from Decode stage???
     
     assign pcWrite = 1; // since there will be no hazards, can write new PC value every CLK cycle
      
     //PC is byte-addressed but our memory is word addressed 
     ProgCount PC (.PC_CLK(CLK), .PC_RST(RESET), .PC_LD(pcWrite),
-                 .PC_DIN(pc_value), .PC_COUNT(pc));   
+                 .PC_DIN(pc_in), .PC_COUNT(pc_out));   
                  
-    assign next_pc = pc + 4;    //PC is byte aligned, memory is word aligned (NEED TO CALC next_pc HERE SO IT'S READY BY NEXT INSTRUCTION                          
+    assign next_pc = pc_out + 4;    //PC is byte aligned, memory is word aligned (NEED TO CALC next_pc HERE SO IT'S READY BY NEXT INSTRUCTION                          
     assign memRead1 = 1; // can hardcode this to 1 since we always want to read an instr in the fetch stage
    
+    //=======================  END FETCH STAGE ===========================//
+    
     // PC REGISTER
     always_ff @(posedge CLK) // transfers PC from fetch to decode
     begin
-        IF_ID_pc <= pc; // delay PC from fetch stage
+        IF_ID_pc <= pc_out; // delay PC from fetch stage
     end
     
-   //======================= DECODE STAGE ===========================//
+   //======================= BEGIN DECODE STAGE ===========================//
 
     logic [31:0] IR; // instruction from fetch stage
     logic [6:0] opcode; // for opcode from IR
     logic [31:0] DE_A, DE_B; // inputs A and B that will be sent to the Execute Stage
     logic opA_sel, opB_sel; // select bits for registers A and B MUXes
-           
+    logic [3:0] alu_fun;
+      
     // Creates a RISC-V register file
     OTTER_registerFile RF (IR[19:15], IR[24:20], IR[11:7], rfIn, regWrite, A, B, CLK); // Register file
     
@@ -126,7 +130,8 @@ module OTTER_MCU(input CLK,
     OTTER_CU_Decoder CU_DECODER(.CU_OPCODE(opcode), .CU_FUNC3(IR[14:12]),.CU_FUNC7(IR[31:25]), 
              .CU_ALU_SRCA(opA_sel), .CU_ALU_SRCB(opB_sel),.CU_ALU_FUN(alu_fun),.CU_RF_WR_SEL(wb_sel),
              .intTaken(intTaken));    
-        
+    
+    //=== DOES THIS ALL NEED TO GO INTO AN ALWAYS_FF??    
     // Assign relevant outputs passed through the DE_EX register here
     assign DE_EX_instr.opcode = opcode;
     assign DE_EX_instr.rs1_addr = IR[19:15];
@@ -161,27 +166,29 @@ module OTTER_MCU(input CLK,
     // Creates a 4-to-1 multiplexor used to select the B input of the ALU
     Mult4to1 ALUBinput (B, I_immed, S_immed, pc, opB_sel, aluBin);
     assign DE_B = aluBin;
-    
-    always_ff @(posedge CLK) // to push intsr_t through the pipeline stages
-    begin
-        EX_MEM_instr <= DE_EX_instr;
-    end
-//======================= EXECUTE STAGE ===========================//
-    logic [31:0] EX_A, EX_B;
+
+//======================= END DECODE STAGE ===========================//
+
+    logic [31:0] EX_A, EX_B, EX_IR;
     always_ff @(posedge CLK) // to push ALU inputs from Decode to Execute stage
     begin
         EX_A <= DE_A;
         EX_B <= DE_B;
+        EX_IR <= IR;
     end
+    
+//======================= BEGIN EXECUTE STAGE ===========================//
+    logic [2:0] func_3; // needed for checking branch conditions
+    logic [31:0] aluResult;
     
     //pc target calculations
     assign jalr_pc = I_immed + EX_A;
     //assign branch_pc = pc + {{21{IR[31]}},IR[7],IR[30:25],IR[11:8] ,1'b0};   //word aligned addresses
-    assign branch_pc = EX_MEM_instr.pc + {{20{IR[31]}},IR[7],IR[30:25],IR[11:8],1'b0};   //byte aligned addresses
-    assign jump_pc = EX_MEM_instr.pc + {{12{IR[31]}}, IR[19:12], IR[20],IR[30:21],1'b0};
+    assign branch_pc = DE_EX_instr.pc + {{20{IR[31]}},EX_IR[7],EX_IR[30:25],EX_IR[11:8],1'b0};   //byte aligned addresses
+    assign jump_pc = DE_EX_instr.pc + {{12{EX_IR[31]}}, EX_IR[19:12], EX_IR[20],EX_IR[30:21],1'b0};
     assign int_pc = 0;
     
-    logic br_lt,br_eq,br_ltu;
+    logic br_taken,br_lt,br_eq,br_ltu;
     //Branch Condition Generator
     always_comb
     begin
@@ -191,22 +198,61 @@ module OTTER_MCU(input CLK,
         if(EX_A<EX_B) br_ltu=1;
     end
     
+    assign func_3 = EX_IR[14:12];
+    
+    always_comb // determine if a branch will be taken
+    begin
+        case(func_3)
+            3'b000: br_taken = br_q;     //BEQ 
+            3'b001: br_taken = ~br_eq;    //BNE
+            3'b100: br_taken = br_lt;     //BLT
+            3'b101: br_taken = ~br_lt;    //BGE
+            3'b110: br_taken = br_ltu;    //BLTU
+            3'b111: br_taken = ~br_ltu;   //BGEU
+            default: br_taken =0;
+        endcase
+    end
+    
+    always_comb // PC_Source generation
+    begin
+        case (DE_EX_instr.opcode)
+            JALR: pc_source = 3'b000;
+            BRANCH: pc_source = (br_taken) ? 3'b001 : 3'b000;
+            JAL: pc_source = 3'b010;
+            SYSTEM: pc_source = (func_3==3'b000)? 3'b101:3'b000; // func_3 = 3'b000 => mret
+            default: pc_source = 3'b000;
+        endcase
+    end
+    
     // Creates a RISC-V ALU
     // Inputs are ALUCtl (the ALU control), ALU value inputs (ALUAin, ALUBin)
     // Outputs are ALUResultOut (the 64-bit output) and Zero (zero detection output)
-    OTTER_ALU ALU (alu_fun, EX_A, EX_B, aluResult); // the ALU
+    OTTER_ALU ALU (DE_EX_instr.alu_fun, EX_A, EX_B, aluResult); // the ALU
+    
+
+//======================= END EXECUTE STAGE ===========================//
+    logic [31:0] MEM_aluResult;
     
     always_ff @(posedge CLK) // to push intsr_t through the pipeline stages
     begin
-        MEM_WB_instr <= EX_MEM_instr;
+        EX_MEM_instr <= DE_EX_instr;
+        MEM_aluResult <= aluResult;    
     end
-//======================= MEMORY STAGE ===========================//
+    
+//======================= BEGIN MEMORY STAGE ===========================//
     
     OTTER_mem_byte #(14) memory  (.MEM_CLK(CLK),.MEM_ADDR1(pc),.MEM_ADDR2(mem_addr_after),.MEM_DIN2(mem_data_after),
                                .MEM_WRITE2(mem_we_after),.MEM_READ1(memRead1),.MEM_READ2(memRead2),
                                .ERR(),.MEM_DOUT1(IR),.MEM_DOUT2(mem_data),.IO_IN(IOBUS_IN),.IO_WR(IOBUS_WR),.MEM_SIZE(mem_size_after),.MEM_SIGN(mem_sign_after));
+
+//======================= END MEMORY STAGE ===========================//
+
+    always_ff @(posedge CLK) // to push intsr_t through the pipeline stages
+    begin
+        MEM_WB_instr <= EX_MEM_instr;
+    end
                                
-//======================= WRITEBACK STAGE ===========================//
+//======================= BEGIN WRITEBACK STAGE ===========================//
 
 // Technically, the writeback stage uses the register file since it writes back to the registers 
     

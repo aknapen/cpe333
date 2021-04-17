@@ -31,7 +31,7 @@ module OTTER_CU_Decoder(
     output logic CU_ALU_SRCA,
     output logic [1:0] CU_ALU_SRCB,
     output logic [3:0] CU_ALU_FUN,
-    output logic [1:0] CU_RF_WR_SEL,   
+    output logic [1:0] CU_RF_WR_SEL   
 //    output logic [3:0] CU_PCSOURCE // Moving PC_Source Generation to the Execute stage
     //output logic [1:0] CU_MSIZE
    );
