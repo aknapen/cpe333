@@ -90,7 +90,7 @@ module OTTER_MCU(input CLK,
     
     logic [31:0] IF_ID_pc;
     
-    wire [31:0] WB_rfIN,csr_reg, mem_data;
+    wire [31:0] WB_rfIn,csr_reg, mem_data;
     
     wire [1:0] wb_sel;
         
@@ -281,7 +281,7 @@ module OTTER_MCU(input CLK,
     // Sets up memory for the fetch stage and for memory accessing in Memory stage
     // In the future need to check on IO and Programmer stuff
     OTTER_mem_byte #(14) memory  (.MEM_CLK(CLK),.MEM_ADDR1(pc_out),.MEM_ADDR2(MEM_aluResult),.MEM_DIN2(MEM_RS2),
-                               .MEM_WRITE2(EX_MEM_instr.memWrite),.MEM_READ1(memRead),.MEM_READ2(EX_MEM_instr.memRead2),
+                               .MEM_WRITE2(EX_MEM_instr.memWrite),.MEM_READ1(memRead1),.MEM_READ2(EX_MEM_instr.memRead2),
                                .ERR(),.MEM_DOUT1(IR),.MEM_DOUT2(mem_data),.IO_IN(IOBUS_IN),.IO_WR(IOBUS_WR),.MEM_SIZE(EX_MEM_instr.mem_type),.MEM_SIGN(mem_sign_after));
 
 //======================= END MEMORY STAGE ===========================//
@@ -307,7 +307,10 @@ module OTTER_MCU(input CLK,
     // Mult4 to 1 ( PC+4, CSR reg, dout2 from mem, alu result, sel = wb_sel from decoder, out = finished register in
     
     // WB_rfIn is connected to the reg file 
-    Mult4to1 regWriteback (MEM_WB_instr.pc + 4,csr_reg,MEM_WB_out, WB_aluResult, MEM_WB_instr.rf_wr_sel, WB_rfIn);
+    logic [31:0] MEM_PC;
+    assign MEM_PC = MEM_WB_instr.pc + 4;
+    
+    Mult4to1 regWriteback (MEM_PC,csr_reg, MEM_WB_out, WB_aluResult, MEM_WB_instr.rf_wr_sel, WB_rfIn);
     
 
     // ************************ BEGIN PROGRAMMER ************************ 
