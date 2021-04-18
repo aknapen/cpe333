@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wave_config>
+   <wave_state>
+   </wave_state>
+   <db_ref_list>
+      <db_ref path="clock_tb_behav.wdb" id="1">
+         <top_modules>
+            <top_module name="clock_tb" />
+            <top_module name="glbl" />
+         </top_modules>
+      </db_ref>
+   </db_ref_list>
+   <zoom_setting>
+      <ZoomStartTime time="0fs"></ZoomStartTime>
+      <ZoomEndTime time="135401fs"></ZoomEndTime>
+      <Cursor1Time time="18900fs"></Cursor1Time>
+   </zoom_setting>
+   <column_width_setting>
+      <NameColumnWidth column_width="162"></NameColumnWidth>
+      <ValueColumnWidth column_width="73"></ValueColumnWidth>
+   </column_width_setting>
+   <WVObjectSize size="11" />
+   <wvobject fp_name="/clock_tb/clk" type="logic">
+      <obj_property name="ElementShortName">clk</obj_property>
+      <obj_property name="ObjectShortName">clk</obj_property>
+   </wvobject>
+   <wvobject type="divider" fp_name="divider50">
+      <obj_property name="label">Fetch Stage</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+   </wvobject>
+   <wvobject fp_name="group51" type="group">
+      <obj_property name="label">Fetch Stage</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+      <wvobject fp_name="/clock_tb/DUT/MCU/memRead1" type="logic">
+         <obj_property name="ElementShortName">memRead1</obj_property>
+         <obj_property name="ObjectShortName">memRead1</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/pcWrite" type="logic">
+         <obj_property name="ElementShortName">pcWrite</obj_property>
+         <obj_property name="ObjectShortName">pcWrite</obj_property>
+      </wvobject>
+      <wvobject fp_name="group60" type="group">
+         <obj_property name="label">PC_MUX</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
+         <wvobject fp_name="/clock_tb/DUT/MCU/next_pc" type="array">
+            <obj_property name="ElementShortName">next_pc[31:0]</obj_property>
+            <obj_property name="ObjectShortName">next_pc[31:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/jalr_pc" type="array">
+            <obj_property name="ElementShortName">jalr_pc[31:0]</obj_property>
+            <obj_property name="ObjectShortName">jalr_pc[31:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/branch_pc" type="array">
+            <obj_property name="ElementShortName">branch_pc[31:0]</obj_property>
+            <obj_property name="ObjectShortName">branch_pc[31:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/jump_pc" type="array">
+            <obj_property name="ElementShortName">jump_pc[31:0]</obj_property>
+            <obj_property name="ObjectShortName">jump_pc[31:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/int_pc" type="array">
+            <obj_property name="ElementShortName">int_pc[31:0]</obj_property>
+            <obj_property name="ObjectShortName">int_pc[31:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/pc_source" type="array">
+            <obj_property name="ElementShortName">pc_source[2:0]</obj_property>
+            <obj_property name="ObjectShortName">pc_source[2:0]</obj_property>
+         </wvobject>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/pc_in" type="array">
+         <obj_property name="ElementShortName">pc_in[31:0]</obj_property>
+         <obj_property name="ObjectShortName">pc_in[31:0]</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/pc_out" type="array">
+         <obj_property name="ElementShortName">pc_out[31:0]</obj_property>
+         <obj_property name="ObjectShortName">pc_out[31:0]</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="divider" fp_name="divider46">
+      <obj_property name="label">Decode Stage</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+   </wvobject>
+   <wvobject fp_name="group52" type="group">
+      <obj_property name="label">Decode Stage</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+      <wvobject fp_name="/clock_tb/DUT/MCU/DE_EX_instr" type="array">
+         <obj_property name="ElementShortName">DE_EX_instr</obj_property>
+         <obj_property name="ObjectShortName">DE_EX_instr</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/I_immed" type="array">
+         <obj_property name="ElementShortName">I_immed[31:0]</obj_property>
+         <obj_property name="ObjectShortName">I_immed[31:0]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/S_immed" type="array">
+         <obj_property name="ElementShortName">S_immed[31:0]</obj_property>
+         <obj_property name="ObjectShortName">S_immed[31:0]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/U_immed" type="array">
+         <obj_property name="ElementShortName">U_immed[31:0]</obj_property>
+         <obj_property name="ObjectShortName">U_immed[31:0]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/aluAin" type="array">
+         <obj_property name="ElementShortName">aluAin[31:0]</obj_property>
+         <obj_property name="ObjectShortName">aluAin[31:0]</obj_property>
+         <obj_property name="Radix">HEXRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/aluBin" type="array">
+         <obj_property name="ElementShortName">aluBin[31:0]</obj_property>
+         <obj_property name="ObjectShortName">aluBin[31:0]</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="divider" fp_name="divider42">
+      <obj_property name="label">Execute Stage</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+   </wvobject>
+   <wvobject fp_name="group43" type="group">
+      <obj_property name="label">Execute Stage</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+      <wvobject fp_name="/clock_tb/DUT/MCU/EX_MEM_instr" type="array">
+         <obj_property name="ElementShortName">EX_MEM_instr</obj_property>
+         <obj_property name="ObjectShortName">EX_MEM_instr</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/EX_A" type="array">
+         <obj_property name="ElementShortName">EX_A[31:0]</obj_property>
+         <obj_property name="ObjectShortName">EX_A[31:0]</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/EX_B" type="array">
+         <obj_property name="ElementShortName">EX_B[31:0]</obj_property>
+         <obj_property name="ObjectShortName">EX_B[31:0]</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/ALU/ALU_fun" type="array">
+         <obj_property name="ElementShortName">ALU_fun[3:0]</obj_property>
+         <obj_property name="ObjectShortName">ALU_fun[3:0]</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/aluResult" type="array">
+         <obj_property name="ElementShortName">aluResult[31:0]</obj_property>
+         <obj_property name="ObjectShortName">aluResult[31:0]</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="divider" fp_name="divider44">
+      <obj_property name="label">Memory Stage</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+   </wvobject>
+   <wvobject fp_name="group53" type="group">
+      <obj_property name="label">Memory Stage</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+      <wvobject fp_name="/clock_tb/DUT/MCU/MEM_WB_instr" type="array">
+         <obj_property name="ElementShortName">MEM_WB_instr</obj_property>
+         <obj_property name="ObjectShortName">MEM_WB_instr</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="divider" fp_name="divider45">
+      <obj_property name="label">Writeback Stage</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+   </wvobject>
+   <wvobject fp_name="group54" type="group">
+      <obj_property name="label">Writeback Stage</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+   </wvobject>
+</wave_config>

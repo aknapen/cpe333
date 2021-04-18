@@ -32,6 +32,19 @@ module OTTER_MCU(input CLK,
                 output PROG_TX  // ADDED PROG_TX FOR PROGRAMMER
 );           
     
+    typedef enum logic [6:0] {
+        LUI      = 7'b0110111,
+        AUIPC    = 7'b0010111,
+        JAL      = 7'b1101111,
+        JALR     = 7'b1100111,
+        BRANCH   = 7'b1100011,
+        LOAD     = 7'b0000011,
+        STORE    = 7'b0100011,
+        OP_IMM   = 7'b0010011,
+        OP       = 7'b0110011,
+        SYSTEM   = 7'b1110011
+    } opcode_t;
+    
     // struct for storing a given pipeline stage's instruction and PC value\
     typedef struct packed{
         opcode_t opcode;
@@ -49,7 +62,7 @@ module OTTER_MCU(input CLK,
         logic [2:0] mem_type;  //sign, size
         logic [31:0] pc;
     } instr_t;
-    
+        
     // ************************ BEGIN PROGRAMMER ************************ 
 
     wire RESET;
@@ -75,7 +88,6 @@ module OTTER_MCU(input CLK,
     instr_t EX_MEM_instr;
     instr_t MEM_WB_instr;
     
-    logic [31:0] ID_EX_IR;
     logic [31:0] IF_ID_pc;
     
     wire [31:0] I_immed,S_immed,U_immed,aluBin,aluAin,rfIn,csr_reg, mem_data;
@@ -118,7 +130,6 @@ module OTTER_MCU(input CLK,
    //======================= BEGIN DECODE STAGE ===========================//
 
     logic [31:0] IR; // instruction from fetch stage
-    logic [6:0] opcode; // for opcode from IR
     logic [31:0] DE_A, DE_B; // inputs A and B that will be sent to the Execute Stage
     logic opA_sel, opB_sel; // select bits for registers A and B MUXes
     logic [3:0] alu_fun;
@@ -127,19 +138,19 @@ module OTTER_MCU(input CLK,
     OTTER_registerFile RF (IR[19:15], IR[24:20], IR[11:7], rfIn, regWrite, A, B, CLK); // Register file
     
     // Instruction Decoder
-    OTTER_CU_Decoder CU_DECODER(.CU_OPCODE(opcode), .CU_FUNC3(IR[14:12]),.CU_FUNC7(IR[31:25]), 
+    OTTER_CU_Decoder CU_DECODER(.CU_OPCODE(IR[6:0]), .CU_FUNC3(IR[14:12]),.CU_FUNC7(IR[31:25]), 
              .CU_ALU_SRCA(opA_sel), .CU_ALU_SRCB(opB_sel),.CU_ALU_FUN(alu_fun),.CU_RF_WR_SEL(wb_sel),
              .intTaken(intTaken));    
     
     //=== DOES THIS ALL NEED TO GO INTO AN ALWAYS_FF??    
     // Assign relevant outputs passed through the DE_EX register here
-    assign DE_EX_instr.opcode = opcode;
+    assign DE_EX_instr.opcode = opcode_t'(IR[6:0]);
     assign DE_EX_instr.rs1_addr = IR[19:15];
     assign DE_EX_instr.rs2_addr = IR[24:20];
     assign DE_EX_instr.rd_addr = IR[11:7];
-    assign DE_EX_instr.rs1_used = ((DE_EX_instr.opcode == BRANCH) || // only BRANCH, STORE, and OP instruction use rs2
-                                   (DE_EX_instr.opcode == STORE) ||
-                                   (DE_EX_instr.opcode == OP)) ? 1 : 0;
+    assign DE_EX_instr.rs1_used = ((DE_EX_instr.opcode != LUI) && // only LUI, AUIPC, and JAL instruction don't use rs1
+                                   (DE_EX_instr.opcode != AUIPC) &&
+                                   (DE_EX_instr.opcode != JAL)) ? 1 : 0;
     assign DE_EX_instr.rs2_used = ((DE_EX_instr.opcode == BRANCH) || // only BRANCH, STORE, and OP instruction use rs2
                                    (DE_EX_instr.opcode == STORE) ||
                                    (DE_EX_instr.opcode == OP)) ? 1 : 0;
@@ -164,7 +175,7 @@ module OTTER_MCU(input CLK,
     assign DE_A = aluAin;
     
     // Creates a 4-to-1 multiplexor used to select the B input of the ALU
-    Mult4to1 ALUBinput (B, I_immed, S_immed, pc, opB_sel, aluBin);
+    Mult4to1 ALUBinput (B, I_immed, S_immed, DE_EX_instr.pc, opB_sel, aluBin);
     assign DE_B = aluBin;
 
 //======================= END DECODE STAGE ===========================//
@@ -203,7 +214,7 @@ module OTTER_MCU(input CLK,
     always_comb // determine if a branch will be taken
     begin
         case(func_3)
-            3'b000: br_taken = br_q;     //BEQ 
+            3'b000: br_taken = br_eq;     //BEQ 
             3'b001: br_taken = ~br_eq;    //BNE
             3'b100: br_taken = br_lt;     //BLT
             3'b101: br_taken = ~br_lt;    //BGE
@@ -241,7 +252,7 @@ module OTTER_MCU(input CLK,
     
 //======================= BEGIN MEMORY STAGE ===========================//
     
-    OTTER_mem_byte #(14) memory  (.MEM_CLK(CLK),.MEM_ADDR1(pc),.MEM_ADDR2(mem_addr_after),.MEM_DIN2(mem_data_after),
+    OTTER_mem_byte #(14) memory  (.MEM_CLK(CLK),.MEM_ADDR1(pc_out),.MEM_ADDR2(mem_addr_after),.MEM_DIN2(mem_data_after),
                                .MEM_WRITE2(mem_we_after),.MEM_READ1(memRead1),.MEM_READ2(memRead2),
                                .ERR(),.MEM_DOUT1(IR),.MEM_DOUT2(mem_data),.IO_IN(IOBUS_IN),.IO_WR(IOBUS_WR),.MEM_SIZE(mem_size_after),.MEM_SIGN(mem_sign_after));
 
