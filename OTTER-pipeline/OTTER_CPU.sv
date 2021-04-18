@@ -128,15 +128,18 @@ module OTTER_MCU(input CLK,
 
     logic [31:0] IR; // instruction from fetch stage
     logic [31:0] DE_A, DE_B; // inputs A and B that will be sent to the Execute Stage
-    logic opA_sel, opB_sel; // select bits for registers A and B MUXes
+    
+    logic opA_sel;// select bits for registers A and B MUXes
+    logic [1:0] opB_sel; 
+    
     logic [3:0] alu_fun;
-    logic [31:0] I_immed,S_immed,U_immed,aluBin,aluAin;
+    logic [31:0] rs1, rs2, I_immed,S_immed,U_immed,aluBin,aluAin;
     
     logic rs1_used, rs2_used, rd_used, memWrite, memRead2, regWrite;  // for calculating struct fields
     opcode_t opcode;
     
     // Creates a RISC-V register file
-    OTTER_registerFile RF (IR[19:15], IR[24:20], IR[11:7], rfIn, regWrite, A, B, CLK); // Register file
+    OTTER_registerFile RF (IR[19:15], IR[24:20], MEM_WB_instr.rd_addr, rfIn, MEM_WB_instr.regWrite, rs1, rs2, CLK); // Register file
     
     // Instruction Decoder
     OTTER_CU_Decoder CU_DECODER(.CU_OPCODE(IR[6:0]), .CU_FUNC3(IR[14:12]),.CU_FUNC7(IR[31:25]), 
@@ -164,11 +167,11 @@ module OTTER_MCU(input CLK,
     assign U_immed = {IR[31:12],{12{1'b0}}};
     
     // Creates a 2-to-1 multiplexor used to select the A input of the ALU 
-    Mult2to1 ALUAinput (A, U_immed, opA_sel, aluAin);
+    Mult2to1 ALUAinput (rs1, U_immed, opA_sel, aluAin);
     assign DE_A = aluAin;
     
     // Creates a 4-to-1 multiplexor used to select the B input of the ALU
-    Mult4to1 ALUBinput (B, I_immed, S_immed, IF_ID_pc, opB_sel, aluBin);
+    Mult4to1 ALUBinput (rs2, I_immed, S_immed, IF_ID_pc, opB_sel, aluBin);
     assign DE_B = aluBin;
 
 //======================= END DECODE STAGE ===========================//
@@ -211,6 +214,7 @@ module OTTER_MCU(input CLK,
     assign int_pc = 0;
     
     logic br_taken,br_lt,br_eq,br_ltu;
+    
     //Branch Condition Generator
     always_comb
     begin
@@ -289,7 +293,7 @@ module OTTER_MCU(input CLK,
     // ************************ BEGIN PROGRAMMER ************************ 
 
     assign mem_addr_after = s_prog_ram_we ? s_prog_ram_addr : aluResult;  // 2:1 mux
-    assign mem_data_after = s_prog_ram_we ? s_prog_ram_data : B;  // 2:1 mux
+    assign mem_data_after = s_prog_ram_we ? s_prog_ram_data : rs2;  // 2:1 mux
     assign mem_size_after = s_prog_ram_we ? 2'b10 : IR[13:12];  // 2:1 mux
     assign mem_sign_after = s_prog_ram_we ? 1'b0 : IR[14];  // 2:1 mux
     assign mem_we_after = s_prog_ram_we | memWrite;  // or gate
