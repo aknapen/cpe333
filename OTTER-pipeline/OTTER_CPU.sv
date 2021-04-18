@@ -90,7 +90,7 @@ module OTTER_MCU(input CLK,
     
     logic [31:0] IF_ID_pc;
     
-    wire [31:0] rfIn,csr_reg, mem_data;
+    wire [31:0] WB_rfIN,csr_reg, mem_data;
     
     wire [1:0] wb_sel;
         
@@ -139,7 +139,7 @@ module OTTER_MCU(input CLK,
     opcode_t opcode;
     
     // Creates a RISC-V register file
-    OTTER_registerFile RF (IR[19:15], IR[24:20], MEM_WB_instr.rd_addr, rfIn, MEM_WB_instr.regWrite, rs1, rs2, CLK); // Register file
+    OTTER_registerFile RF (IR[19:15], IR[24:20], MEM_WB_instr.rd_addr, WB_rfIn, MEM_WB_instr.regWrite, rs1, rs2, CLK); // Register file
     
     // Instruction Decoder
     OTTER_CU_Decoder CU_DECODER(.CU_OPCODE(IR[6:0]), .CU_FUNC3(IR[14:12]),.CU_FUNC7(IR[31:25]), 
@@ -176,12 +176,13 @@ module OTTER_MCU(input CLK,
 
 //======================= END DECODE STAGE ===========================//
 
-    logic [31:0] EX_A, EX_B, EX_IR;
+    logic [31:0] EX_A, EX_B, EX_IR, EX_RS2;
     always_ff @(posedge CLK) // to push ALU inputs and instruction from Decode to Execute stage
     begin
         EX_A <= DE_A;
         EX_B <= DE_B;
         EX_IR <= IR;
+        EX_RS2 <= rs2; // Need this later for mem
     end
     
     always_ff @(posedge CLK) // to push struct info from Decode to Execute Stage
@@ -258,24 +259,40 @@ module OTTER_MCU(input CLK,
 
 //======================= END EXECUTE STAGE ===========================//
     logic [31:0] MEM_aluResult;
+    logic [31:0] MEM_RS2;
     
     always_ff @(posedge CLK) // to push intsr_t through the pipeline stages
     begin
         EX_MEM_instr <= DE_EX_instr;
-        MEM_aluResult <= aluResult;    
+        MEM_aluResult <= aluResult;   
+        MEM_RS2 <= EX_RS2; // Need this for din2 into memory
     end
     
 //======================= BEGIN MEMORY STAGE ===========================//
     
-    OTTER_mem_byte #(14) memory  (.MEM_CLK(CLK),.MEM_ADDR1(pc_out),.MEM_ADDR2(mem_addr_after),.MEM_DIN2(mem_data_after),
-                               .MEM_WRITE2(mem_we_after),.MEM_READ1(memRead1),.MEM_READ2(memRead2),
-                               .ERR(),.MEM_DOUT1(IR),.MEM_DOUT2(mem_data),.IO_IN(IOBUS_IN),.IO_WR(IOBUS_WR),.MEM_SIZE(mem_size_after),.MEM_SIGN(mem_sign_after));
+    // Original Memory 
+//    OTTER_mem_byte #(14) memory  (.MEM_CLK(CLK),.MEM_ADDR1(pc_out),.MEM_ADDR2(mem_addr_after),.MEM_DIN2(mem_data_after),
+//                               .MEM_WRITE2(mem_we_after),.MEM_READ1(memRead1),.MEM_READ2(memRead2),
+//                               .ERR(),.MEM_DOUT1(IR),.MEM_DOUT2(mem_data),.IO_IN(IOBUS_IN),.IO_WR(IOBUS_WR),.MEM_SIZE(mem_size_after),.MEM_SIGN(mem_sign_after));
+    
+    //    assign mem_data_after = s_prog_ram_we ? s_prog_ram_data : MEM_RS2;  // I think something needs to be done with this but not sure how it works
+//        assign mem_size_after = s_prog_ram_we ? 2'b10 : IR[13:12];  // 2:1 mux
+
+    // Sets up memory for the fetch stage and for memory accessing in Memory stage
+    // In the future need to check on IO and Programmer stuff
+    OTTER_mem_byte #(14) memory  (.MEM_CLK(CLK),.MEM_ADDR1(pc_out),.MEM_ADDR2(MEM_aluResult),.MEM_DIN2(MEM_RS2),
+                               .MEM_WRITE2(EX_MEM_instr.memWrite),.MEM_READ1(memRead),.MEM_READ2(EX_MEM_instr.memRead2),
+                               .ERR(),.MEM_DOUT1(IR),.MEM_DOUT2(mem_data),.IO_IN(IOBUS_IN),.IO_WR(IOBUS_WR),.MEM_SIZE(EX_MEM_instr.mem_type),.MEM_SIGN(mem_sign_after));
 
 //======================= END MEMORY STAGE ===========================//
-
-    always_ff @(posedge CLK) // to push intsr_t through the pipeline stages
+    logic [31:0] MEM_WB_out;
+    logic [31:0] WB_aluResult;
+    
+    always_ff @(posedge CLK) // to push intsr_t through the pipeline stages and result of the memory
     begin
         MEM_WB_instr <= EX_MEM_instr;
+        MEM_WB_out <= mem_data;
+        WB_aluResult <= MEM_aluResult;
     end
                                
 //======================= BEGIN WRITEBACK STAGE ===========================//
@@ -287,7 +304,10 @@ module OTTER_MCU(input CLK,
            .rd(csr_reg),.mepc(mepc),.mtvec(mtvec),.mie(mie));  
     
     //Creates 4-to-1 multiplexor used to select reg write back data
-    Mult4to1 regWriteback (next_pc,csr_reg,mem_data,aluResult,wb_sel,rfIn);
+    // Mult4 to 1 ( PC+4, CSR reg, dout2 from mem, alu result, sel = wb_sel from decoder, out = finished register in
+    
+    // WB_rfIn is connected to the reg file 
+    Mult4to1 regWriteback (MEM_WB_instr.pc + 4,csr_reg,MEM_WB_out, WB_aluResult, MEM_WB_instr.rf_wr_sel, WB_rfIn);
     
 
     // ************************ BEGIN PROGRAMMER ************************ 
