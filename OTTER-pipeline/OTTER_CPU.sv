@@ -176,13 +176,14 @@ module OTTER_MCU(input CLK,
 
 //======================= END DECODE STAGE ===========================//
 
-    logic [31:0] EX_A, EX_B, EX_IR, EX_RS2;
+    logic [31:0] EX_A, EX_B, EX_IR, EX_RS2, EX_I_immed;
     always_ff @(posedge CLK) // to push ALU inputs and instruction from Decode to Execute stage
     begin
         EX_A <= DE_A;
         EX_B <= DE_B;
         EX_IR <= IR;
         EX_RS2 <= rs2; // Need this later for mem
+        EX_I_immed <= I_immed;
     end
     
     always_ff @(posedge CLK) // to push struct info from Decode to Execute Stage
@@ -259,13 +260,14 @@ module OTTER_MCU(input CLK,
 
 //======================= END EXECUTE STAGE ===========================//
     logic [31:0] MEM_aluResult;
-    logic [31:0] MEM_RS2;
+    logic [31:0] MEM_RS2, MEM_I_immed;
     
     always_ff @(posedge CLK) // to push intsr_t through the pipeline stages
     begin
         EX_MEM_instr <= DE_EX_instr;
         MEM_aluResult <= aluResult;   
         MEM_RS2 <= EX_RS2; // Need this for din2 into memory
+        MEM_I_immed <= EX_I_immed; // Need this for CSR
     end
     
 //======================= BEGIN MEMORY STAGE ===========================//
@@ -286,13 +288,14 @@ module OTTER_MCU(input CLK,
 
 //======================= END MEMORY STAGE ===========================//
     logic [31:0] MEM_WB_out;
-    logic [31:0] WB_aluResult;
+    logic [31:0] WB_aluResult, WB_I_immed;
     
     always_ff @(posedge CLK) // to push intsr_t through the pipeline stages and result of the memory
     begin
         MEM_WB_instr <= EX_MEM_instr;
         MEM_WB_out <= mem_data;
         WB_aluResult <= MEM_aluResult;
+        WB_I_immed <= MEM_I_immed;
     end
                                
 //======================= BEGIN WRITEBACK STAGE ===========================//
@@ -300,7 +303,11 @@ module OTTER_MCU(input CLK,
 // Technically, the writeback stage uses the register file since it writes back to the registers 
     
     //CSR registers and interrupt logic
-    CSR CSRs(.clk(CLK),.rst(RESET),.intTaken(intTaken),.addr(IR[31:20]),.next_pc(pc),.wd(aluResult),.wr_en(csrWrite),
+//    CSR CSRs(.clk(CLK),.rst(RESET),.intTaken(intTaken),.addr(IR[31:20]),.next_pc(pc),.wd(aluResult),.wr_en(csrWrite),
+//           .rd(csr_reg),.mepc(mepc),.mtvec(mtvec),.mie(mie));  
+
+   
+    CSR CSRs(.clk(CLK),.rst(RESET),.intTaken(intTaken),.addr(WB_I_immed),.next_pc(MEM_WB_instr.pc),.wd(WB_aluResult),.wr_en(csrWrite),
            .rd(csr_reg),.mepc(mepc),.mtvec(mtvec),.mie(mie));  
     
     //Creates 4-to-1 multiplexor used to select reg write back data
