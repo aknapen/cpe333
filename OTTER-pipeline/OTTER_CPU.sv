@@ -90,12 +90,8 @@ module OTTER_MCU(input CLK,
     
     logic [31:0] IF_ID_pc;
     
-    wire [31:0] I_immed,S_immed,U_immed,aluBin,aluAin,rfIn,csr_reg, mem_data;
+    wire [31:0] rfIn,csr_reg, mem_data;
     
-    
-    wire memRead1,memRead2;
-    
-    wire regWrite, memWrite;
     wire [1:0] wb_sel;
         
     wire mepcWrite, csrWrite,intCLR, mie, intTaken;
@@ -106,6 +102,7 @@ module OTTER_MCU(input CLK,
     logic [31:0] pc_in, pc_out, next_pc, jalr_pc, branch_pc, jump_pc, int_pc;   
     logic pcWrite;
     logic [2:0] pc_source;
+    logic memRead1;
     
     // Creates a 2-to-1 multiplexor used to select the source of the next PC
     Mult6to1 PCdatasrc (next_pc, jalr_pc, branch_pc, jump_pc, mtvec, mepc, pc_source, pc_in); // TODO: need to clk pc_sel from Decode stage???
@@ -133,7 +130,11 @@ module OTTER_MCU(input CLK,
     logic [31:0] DE_A, DE_B; // inputs A and B that will be sent to the Execute Stage
     logic opA_sel, opB_sel; // select bits for registers A and B MUXes
     logic [3:0] alu_fun;
-      
+    logic [31:0] I_immed,S_immed,U_immed,aluBin,aluAin;
+    
+    logic rs1_used, rs2_used, rd_used, memWrite, memRead2, regWrite;  // for calculating struct fields
+    opcode_t opcode;
+    
     // Creates a RISC-V register file
     OTTER_registerFile RF (IR[19:15], IR[24:20], IR[11:7], rfIn, regWrite, A, B, CLK); // Register file
     
@@ -141,29 +142,21 @@ module OTTER_MCU(input CLK,
     OTTER_CU_Decoder CU_DECODER(.CU_OPCODE(IR[6:0]), .CU_FUNC3(IR[14:12]),.CU_FUNC7(IR[31:25]), 
              .CU_ALU_SRCA(opA_sel), .CU_ALU_SRCB(opB_sel),.CU_ALU_FUN(alu_fun),.CU_RF_WR_SEL(wb_sel),
              .intTaken(intTaken));    
-    
-    //=== DOES THIS ALL NEED TO GO INTO AN ALWAYS_FF??    
-    // Assign relevant outputs passed through the DE_EX register here
-    assign DE_EX_instr.opcode = opcode_t'(IR[6:0]);
-    assign DE_EX_instr.rs1_addr = IR[19:15];
-    assign DE_EX_instr.rs2_addr = IR[24:20];
-    assign DE_EX_instr.rd_addr = IR[11:7];
-    assign DE_EX_instr.rs1_used = ((DE_EX_instr.opcode != LUI) && // only LUI, AUIPC, and JAL instruction don't use rs1
-                                   (DE_EX_instr.opcode != AUIPC) &&
-                                   (DE_EX_instr.opcode != JAL)) ? 1 : 0;
-    assign DE_EX_instr.rs2_used = ((DE_EX_instr.opcode == BRANCH) || // only BRANCH, STORE, and OP instruction use rs2
-                                   (DE_EX_instr.opcode == STORE) ||
-                                   (DE_EX_instr.opcode == OP)) ? 1 : 0;
-    assign DE_EX_instr.rd_used = ((DE_EX_instr.opcode != BRANCH) && // only BRANCH and STORE instructions don't use an rd
-                                  (DE_EX_instr.opcode != STORE)) ? 1 : 0; 
-    assign DE_EX_instr.alu_fun = alu_fun;
-    assign DE_EX_instr.memWrite = (DE_EX_instr.opcode == STORE) ? 1 : 0; // only enable mem write on a store instruction
-    assign DE_EX_instr.memRead2 = (DE_EX_instr.opcode == LOAD) ? 1 : 0; // only enable read from mem on a load instruction
-    assign DE_EX_instr.regWrite = ((DE_EX_instr.opcode != BRANCH) && // no rd for BRANCH or STORE instructions
-                                   (DE_EX_instr.opcode !=STORE)) ? 1 : 0;     
-    assign DE_EX_instr.rf_wr_sel = wb_sel;
-    assign DE_EX_instr.mem_type = IR[14:12]; // holds size and sign for memory module (funct3 in instruction)
-    assign DE_EX_instr.pc = IF_ID_pc; // get pc value from fetch stage
+             
+    // Take care of logic need to assign values pushed through pipeline in the struct
+    assign opcode = opcode_t'(IR[6:0]);
+    assign rs1_used = ((opcode != LUI) && // only LUI, AUIPC, and JAL instruction don't use rs1
+                       (opcode != AUIPC) &&
+                       (opcode != JAL)) ? 1 : 0;
+    assign rs2_used = ((opcode == BRANCH) || // only BRANCH, STORE, and OP instruction use rs2
+                       (opcode == STORE) ||
+                       (opcode == OP)) ? 1 : 0;
+    assign rd_used = ((opcode != BRANCH) && // only BRANCH and STORE instructions don't use an rd
+                      (opcode != STORE)) ? 1 : 0;  
+    assign memWrite = (opcode == STORE) ? 1 : 0; // only enable mem write on a store instruction
+    assign memRead2 = (opcode == LOAD) ? 1 : 0; // only enable read from mem on a load instruction
+    assign regWrite = ((opcode != BRANCH) && // no rd for BRANCH or STORE instructions
+                       (opcode != STORE)) ? 1 : 0;                                                           
     
     // Generate immediates
     assign S_immed = {{20{IR[31]}},IR[31:25],IR[11:7]};
@@ -175,19 +168,37 @@ module OTTER_MCU(input CLK,
     assign DE_A = aluAin;
     
     // Creates a 4-to-1 multiplexor used to select the B input of the ALU
-    Mult4to1 ALUBinput (B, I_immed, S_immed, DE_EX_instr.pc, opB_sel, aluBin);
+    Mult4to1 ALUBinput (B, I_immed, S_immed, IF_ID_pc, opB_sel, aluBin);
     assign DE_B = aluBin;
 
 //======================= END DECODE STAGE ===========================//
 
     logic [31:0] EX_A, EX_B, EX_IR;
-    always_ff @(posedge CLK) // to push ALU inputs from Decode to Execute stage
+    always_ff @(posedge CLK) // to push ALU inputs and instruction from Decode to Execute stage
     begin
         EX_A <= DE_A;
         EX_B <= DE_B;
         EX_IR <= IR;
     end
     
+    always_ff @(posedge CLK) // to push struct info from Decode to Execute Stage
+    begin
+        DE_EX_instr.opcode <= opcode;
+        DE_EX_instr.rs1_addr <= IR[19:15];
+        DE_EX_instr.rs2_addr <= IR[24:20];
+        DE_EX_instr.rd_addr <= IR[11:7];
+        DE_EX_instr.rs1_used <= rs1_used;
+        DE_EX_instr.rs2_used <= rs2_used;
+        DE_EX_instr.rd_used <= rd_used;
+        DE_EX_instr.alu_fun <= alu_fun;
+        DE_EX_instr.memWrite <= memWrite;
+        DE_EX_instr.memRead2 <= memRead2;
+        DE_EX_instr.regWrite <= regWrite;  
+        DE_EX_instr.rf_wr_sel <= wb_sel;
+        DE_EX_instr.mem_type <= IR[14:12]; // holds size and sign for memory module (funct3 in instruction)
+        DE_EX_instr.pc <= IF_ID_pc; // get pc value from fetch stage                                                                        
+    end  
+      
 //======================= BEGIN EXECUTE STAGE ===========================//
     logic [2:0] func_3; // needed for checking branch conditions
     logic [31:0] aluResult;
