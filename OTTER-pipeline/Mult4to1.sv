@@ -21,7 +21,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 module Mult6to1(In1, In2, In3, In4, In5, In6, Sel, Out);
     input [31:0] In1, In2, In3, In4, In5, In6; //32-bit inputs 
-    input [3:0] Sel; //selector signal
+    input [2:0] Sel; //selector signal
     output logic [31:0] Out; //64-bit output
     always_comb
         case (Sel) //a 5->1 multiplexor

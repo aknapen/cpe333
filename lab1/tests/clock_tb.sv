@@ -27,7 +27,7 @@ module clock_tb();
     logic clk = 0;
     initial begin
         #10 clk = 1;
-        forever #5 clk = ~clk;
+        forever #10 clk = ~clk;
     end
     
     //if your clock signal in OTTER_Wrapper is named something other than "CLK", change it here

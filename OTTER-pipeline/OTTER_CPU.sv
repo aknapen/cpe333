@@ -104,8 +104,18 @@ module OTTER_MCU(input CLK,
     logic [2:0] pc_source;
     logic memRead1;
     
-    // Creates a 2-to-1 multiplexor used to select the source of the next PC
+    // Creates a 6-to-1 multiplexor used to select the source of the next PC
     Mult6to1 PCdatasrc (next_pc, jalr_pc, branch_pc, jump_pc, mtvec, mepc, pc_source, pc_in); // TODO: need to clk pc_sel from Decode stage???
+    
+//    always_comb
+//        case (pc_source) //a 5->1 multiplexor
+//            0: pc_in <= next_pc; 
+//            1: pc_in <= jalr_pc; 
+//            2: pc_in <= branch_pc;
+//            3: pc_in <= jump_pc;
+//            default: pc_in <= next_pc; 
+//        endcase
+        
     
     assign pcWrite = 1; // since there will be no hazards, can write new PC value every CLK cycle
      
@@ -244,9 +254,9 @@ module OTTER_MCU(input CLK,
     always_comb // PC_Source generation
     begin
         case (DE_EX_instr.opcode)
-            JALR: pc_source = 3'b000;
-            BRANCH: pc_source = (br_taken) ? 3'b001 : 3'b000;
-            JAL: pc_source = 3'b010;
+            JALR: pc_source = 3'b001;
+            BRANCH: pc_source = (br_taken) ? 3'b010 : 3'b000;
+            JAL: pc_source = 3'b011;
             SYSTEM: pc_source = (func_3==3'b000)? 3'b101:3'b000; // func_3 = 3'b000 => mret
             default: pc_source = 3'b000;
         endcase
@@ -287,13 +297,13 @@ module OTTER_MCU(input CLK,
                                .ERR(),.MEM_DOUT1(IR),.MEM_DOUT2(mem_data),.IO_IN(IOBUS_IN),.IO_WR(IOBUS_WR),.MEM_SIZE(EX_MEM_instr.mem_type),.MEM_SIGN(mem_sign_after));
 
 //======================= END MEMORY STAGE ===========================//
-    logic [31:0] MEM_WB_out;
+//    logic [31:0] MEM_WB_out;
     logic [31:0] WB_aluResult, WB_I_immed;
     
     always_ff @(posedge CLK) // to push intsr_t through the pipeline stages and result of the memory
     begin
         MEM_WB_instr <= EX_MEM_instr;
-        MEM_WB_out <= mem_data;
+//        MEM_WB_out <= mem_data;
         WB_aluResult <= MEM_aluResult;
         WB_I_immed <= MEM_I_immed;
     end
@@ -317,7 +327,7 @@ module OTTER_MCU(input CLK,
     logic [31:0] MEM_PC;
     assign MEM_PC = MEM_WB_instr.pc + 4;
     
-    Mult4to1 regWriteback (MEM_PC,csr_reg, MEM_WB_out, WB_aluResult, MEM_WB_instr.rf_wr_sel, WB_rfIn);
+    Mult4to1 regWriteback (MEM_PC,csr_reg, mem_data, WB_aluResult, MEM_WB_instr.rf_wr_sel, WB_rfIn);
     
 
     // ************************ BEGIN PROGRAMMER ************************ 
