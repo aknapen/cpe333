@@ -5,7 +5,7 @@
 	TESTLOAD: .word 50
 	TESTSTORE: .word 0
 	TESTU: .word 0x1000770
-	
+
 .text
 	#Setup stuff
 	addi a0, zero, 50 #50 is an arbitrary number, most tests will end up with a result of 50 to keep things simple
@@ -25,7 +25,7 @@ R_tests:
 	bne a0, a2, fail #a2 should equal 50, otherwise program jumps to fail
 	nop
 	nop
-	
+
 	#Subtract Test
 	#Set a2 to 75, then subtract back down to 50
 	addi a2, zero, 75
@@ -37,7 +37,7 @@ R_tests:
 	bne a0, a2, fail
 	nop
 	nop
-	
+
 	#Shift Left Test
 	#Shift t0 (25) left once (multiply by 2) and store in a2
 	sll a2, t0, a1
@@ -46,7 +46,7 @@ R_tests:
 	bne a0, a2, fail
 	nop
 	nop
-	
+
 	#Set Less Than Test
 	#Check if 25 < 50
 	slt a2, t0, a0 #slt stores 1 in a2 if t0 < a0, 0 otherwise
@@ -55,7 +55,7 @@ R_tests:
 	beq a2, zero, fail
 	nop
 	nop
-	
+
 	#Set Less Than Unsigned Test
 	#Check if -75 < 50 (it shouldn't be, since its unsigned)
 	addi t0, zero, -75
@@ -67,7 +67,7 @@ R_tests:
 	bne a2, zero, fail
 	nop
 	nop
-	
+
 	#Xor Test
 	#Xor something with itself, should be 0
 	#Xor something with 0, should be itself
@@ -83,7 +83,7 @@ R_tests:
 	bne a2, t0, fail
 	nop
 	nop
-	
+
 	#Shift Right Logical Test
 	#Set a2 to 100, shift right once, test to make sure result is 50
 	addi a2, zero, 100
@@ -95,7 +95,7 @@ R_tests:
 	bne a0, a2, fail
 	nop
 	nop
-	
+
 	#Shift Right Arithmetic Test
 	#Shift 100 right, should be 50
 	#Shift -100 right, should be -50
@@ -116,7 +116,7 @@ R_tests:
 	bne a2, t2, fail
 	nop
 	nop
-	
+
 	#Or Test
 	#Or something with itself, should be itself
 	#Or something with 0, should be itself
@@ -132,7 +132,7 @@ R_tests:
 	bne a0, a2, fail
 	nop
 	nop
-	
+
 	#And Test
 	#And something with itself, should be itself
 	#And something with 0, should be 0
@@ -167,7 +167,7 @@ I_tests:
 	bne a2, zero, fail
 	nop
 	nop
-	
+
 	#Set Less Than Immediate Test
 	#Check if 25 < 50
 	addi t0, zero, 25
@@ -179,7 +179,7 @@ I_tests:
 	beq a2, zero, fail
 	nop
 	nop
-	
+
 	#Set Less Than Immediate Unsigned Test
 	#Check if -75 < 50 (it shouldn't be, since its unsigned)
 	addi t0, zero, -75
@@ -191,7 +191,7 @@ I_tests:
 	bne a2, zero, fail
 	nop
 	nop
-	
+
 	#Xor Immediate Test
 	#Xor something with itself, should be 0
 	#Xor something with 0, should be itself
@@ -210,7 +210,7 @@ I_tests:
 	bne a2, t0, fail
 	nop
 	nop
-	
+
 	#Or Immediate Test
 	#Or something with itself, should be itself
 	#Or something with 0, should be itself
@@ -226,7 +226,7 @@ I_tests:
 	bne a0, a2, fail
 	nop
 	nop
-	
+
 	#And Immediate Test
 	#And something with itself, should be itself
 	#And something with 0, should be 0
@@ -242,7 +242,7 @@ I_tests:
 	bne a2, zero, fail
 	nop
 	nop
-	
+
 	#Shift Left Immediate Test
 	#Shift t0 (25) left once (multiply by 2) and store in a2
 	slli a2, t0, 1
@@ -251,7 +251,7 @@ I_tests:
 	bne a0, a2, fail
 	nop
 	nop
-	
+
 	#Shift Right Logical Immediate Test
 	#Set a2 to 100, shift right once, test to make sure result is 50
 	addi a2, zero, 100
@@ -263,7 +263,7 @@ I_tests:
 	bne a0, a2, fail
 	nop
 	nop
-	
+
 	#Shift Right Arithmetic Immediate Test
 	#Shift 100 right, should be 50
 	#Shift -100 right, should be -50
@@ -284,42 +284,42 @@ I_tests:
 	bne a2, t2, fail
 	nop
 	nop
-	
+
 B_tests:
 	addi t0, zero, -50
 	nop
 	nop
-	
+
 	#BEQ test
 	beq zero, a0, fail
 	nop
 	nop
-	
+
 	#BNE test
 	bne zero, zero, fail
 	nop
 	nop
-	
+
 	#BLT test
 	blt a0, zero, fail
 	nop
 	nop
-	
+
 	#BGE test
 	bge zero, a0, fail
 	nop
 	nop
-	
+
 	#BLTU test
 	bltu t0, zero, fail
 	nop
 	nop
-	
+
 	#BGEU test
 	bgeu zero, t0, fail
 	nop
 	nop
-	
+
 Jump_tests:
 	addi t1, zero, 0x3c8
 	nop
@@ -332,7 +332,7 @@ Jump_tests:
 	skip:
 	nop
 	nop
-	
+
 	#jalr test
 	jalr t0, 0(t1)
 	nop
@@ -340,15 +340,16 @@ Jump_tests:
 	beq zero, zero, fail
 	nop
 	nop
-	
-Load_tests:	
+
+Load_tests:
 	nop
 	nop
 	#Load test
-	auipc	t0,0x0 
+	auipc	t0,0x0
 	nop
 	nop
-	addi	t0,t0,212 # PC+212=0x4ac <TESTLOAD>
+	addi	t0,t0,220 # PC+212=0x4ac <TESTLOAD>
+	#la t0, TESTLOAD
 	nop
 	nop
 	lw t1, 0(t0)
@@ -357,15 +358,15 @@ Load_tests:
 	bne t1, a0, fail
 	nop
 	nop
-	
-STORE_tests:	
+
+STORE_tests:
 	nop
 	nop
 	#Store test
-	auipc	t0,0x0 
+	auipc	t0,0x0
 	nop
 	nop
-	addi	t0,t0,160 # PC+160= 0x4b0 <TESTSTORE>
+	addi	t0,t0,168 # PC+160= 0x4b0 <TESTSTORE>
 	nop
 	nop
 	sw a0, 0(t0)
@@ -379,16 +380,16 @@ STORE_tests:
 	bne t1, a0, fail
 	nop
 	nop
-	
-U_tests:	
+
+U_tests:
 	nop
 	nop
-	
+
 	#Load upper immediate test
-	auipc	t0,0x0 
+	auipc	t0,0x0
 	nop
 	nop
-	addi	t0,t0,88 # PC+88=0x4b4 <TESTU>
+	addi	t0,t0,96 # PC+88=0x4b4 <TESTU>
 	nop
 	nop
 	lw t1, 0(t0) #t1 should now hold the value 6000
@@ -403,11 +404,11 @@ U_tests:
 	bne t1, t2, fail
 	nop
 	nop
-	
+
 RESET:
 	j R_tests
 	nop
 	nop
-	
+
 fail:
 	j fail
