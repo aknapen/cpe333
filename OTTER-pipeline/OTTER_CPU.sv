@@ -219,7 +219,7 @@ module OTTER_MCU(input CLK,
     logic [31:0] aluResult;
     
     //pc target calculations
-    assign jalr_pc = I_immed + EX_A;
+    assign jalr_pc = EX_I_immed + EX_A;
     //assign branch_pc = pc + {{21{IR[31]}},IR[7],IR[30:25],IR[11:8] ,1'b0};   //word aligned addresses
     assign branch_pc = DE_EX_instr.pc + {{20{IR[31]}},EX_IR[7],EX_IR[30:25],EX_IR[11:8],1'b0};   //byte aligned addresses
     assign jump_pc = DE_EX_instr.pc + {{12{EX_IR[31]}}, EX_IR[19:12], EX_IR[20],EX_IR[30:21],1'b0};
@@ -294,7 +294,7 @@ module OTTER_MCU(input CLK,
     // In the future need to check on IO and Programmer stuff
     OTTER_mem_byte #(14) memory  (.MEM_CLK(CLK),.MEM_ADDR1(pc_out),.MEM_ADDR2(MEM_aluResult),.MEM_DIN2(MEM_RS2),
                                .MEM_WRITE2(EX_MEM_instr.memWrite),.MEM_READ1(memRead1),.MEM_READ2(EX_MEM_instr.memRead2),
-                               .ERR(),.MEM_DOUT1(IR),.MEM_DOUT2(mem_data),.IO_IN(IOBUS_IN),.IO_WR(IOBUS_WR),.MEM_SIZE(EX_MEM_instr.mem_type),.MEM_SIGN(mem_sign_after));
+                               .ERR(),.MEM_DOUT1(IR),.MEM_DOUT2(mem_data),.IO_IN(IOBUS_IN),.IO_WR(IOBUS_WR),.MEM_SIZE(EX_MEM_instr.mem_type[1:0]),.MEM_SIGN(mem_sign_after));
 
 //======================= END MEMORY STAGE ===========================//
 //    logic [31:0] MEM_WB_out;
@@ -332,11 +332,11 @@ module OTTER_MCU(input CLK,
 
     // ************************ BEGIN PROGRAMMER ************************ 
 
-    assign mem_addr_after = s_prog_ram_we ? s_prog_ram_addr : aluResult;  // 2:1 mux
-    assign mem_data_after = s_prog_ram_we ? s_prog_ram_data : rs2;  // 2:1 mux
-    assign mem_size_after = s_prog_ram_we ? 2'b10 : IR[13:12];  // 2:1 mux
-    assign mem_sign_after = s_prog_ram_we ? 1'b0 : IR[14];  // 2:1 mux
-    assign mem_we_after = s_prog_ram_we | memWrite;  // or gate
+    assign mem_addr_after = s_prog_ram_we ? s_prog_ram_addr : MEM_aluResult;  // 2:1 mux
+    assign mem_data_after = s_prog_ram_we ? s_prog_ram_data : MEM_RS2;  // 2:1 mux
+    assign mem_size_after = s_prog_ram_we ? 2'b10 : EX_MEM_instr.mem_type[1:0];  // 2:1 mux
+    assign mem_sign_after = s_prog_ram_we ? 1'b0 : EX_MEM_instr.mem_type[2];  // 2:1 mux
+    assign mem_we_after = s_prog_ram_we | EX_MEM_instr.memWrite;  // or gate
     assign RESET = s_prog_mcu_reset | EXT_RESET;  // or gate
 
     // ************************ END PROGRAMMER ************************               
