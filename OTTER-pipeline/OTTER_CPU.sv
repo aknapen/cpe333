@@ -89,11 +89,7 @@ module OTTER_MCU(input CLK,
     instr_t MEM_WB_instr;
     
     logic [31:0] IF_ID_pc;
-    
-    wire [31:0] WB_rfIn,csr_reg, mem_data;
-    
-    wire [1:0] wb_sel;
-        
+      
     wire mepcWrite, csrWrite,intCLR, mie, intTaken;
     wire [31:0] mepc, mtvec;
    
@@ -105,18 +101,8 @@ module OTTER_MCU(input CLK,
     logic memRead1;
     
     // Creates a 6-to-1 multiplexor used to select the source of the next PC
-    Mult6to1 PCdatasrc (next_pc, jalr_pc, branch_pc, jump_pc, mtvec, mepc, pc_source, pc_in); // TODO: need to clk pc_sel from Decode stage???
-    
-//    always_comb
-//        case (pc_source) //a 5->1 multiplexor
-//            0: pc_in <= next_pc; 
-//            1: pc_in <= jalr_pc; 
-//            2: pc_in <= branch_pc;
-//            3: pc_in <= jump_pc;
-//            default: pc_in <= next_pc; 
-//        endcase
-        
-    
+    Mult6to1 PCdatasrc (next_pc, jalr_pc, branch_pc, jump_pc, mtvec, mepc, pc_source, pc_in);
+       
     assign pcWrite = 1; // since there will be no hazards, can write new PC value every CLK cycle
      
     //PC is byte-addressed but our memory is word addressed 
@@ -146,6 +132,9 @@ module OTTER_MCU(input CLK,
     logic [31:0] rs1, rs2, I_immed,S_immed,U_immed,aluBin,aluAin;
     
     logic rs1_used, rs2_used, rd_used, memWrite, memRead2, regWrite;  // for calculating struct fields
+    
+    logic [1:0] wb_sel;
+    
     opcode_t opcode;
     
     // Creates a RISC-V register file
@@ -281,15 +270,8 @@ module OTTER_MCU(input CLK,
     end
     
 //======================= BEGIN MEMORY STAGE ===========================//
-    
-    // Original Memory 
-//    OTTER_mem_byte #(14) memory  (.MEM_CLK(CLK),.MEM_ADDR1(pc_out),.MEM_ADDR2(mem_addr_after),.MEM_DIN2(mem_data_after),
-//                               .MEM_WRITE2(mem_we_after),.MEM_READ1(memRead1),.MEM_READ2(memRead2),
-//                               .ERR(),.MEM_DOUT1(IR),.MEM_DOUT2(mem_data),.IO_IN(IOBUS_IN),.IO_WR(IOBUS_WR),.MEM_SIZE(mem_size_after),.MEM_SIGN(mem_sign_after));
-    
-    //    assign mem_data_after = s_prog_ram_we ? s_prog_ram_data : MEM_RS2;  // I think something needs to be done with this but not sure how it works
-//        assign mem_size_after = s_prog_ram_we ? 2'b10 : IR[13:12];  // 2:1 mux
-
+    logic [31:0] mem_data;
+ 
     // Sets up memory for the fetch stage and for memory accessing in Memory stage
     // In the future need to check on IO and Programmer stuff
     OTTER_mem_byte #(14) memory  (.MEM_CLK(CLK),.MEM_ADDR1(pc_out),.MEM_ADDR2(MEM_aluResult),.MEM_DIN2(MEM_RS2),
@@ -297,25 +279,21 @@ module OTTER_MCU(input CLK,
                                .ERR(),.MEM_DOUT1(IR),.MEM_DOUT2(mem_data),.IO_IN(IOBUS_IN),.IO_WR(IOBUS_WR),.MEM_SIZE(EX_MEM_instr.mem_type[1:0]),.MEM_SIGN(mem_sign_after));
 
 //======================= END MEMORY STAGE ===========================//
-//    logic [31:0] MEM_WB_out;
+
     logic [31:0] WB_aluResult, WB_I_immed;
     
     always_ff @(posedge CLK) // to push intsr_t through the pipeline stages and result of the memory
     begin
         MEM_WB_instr <= EX_MEM_instr;
-//        MEM_WB_out <= mem_data;
         WB_aluResult <= MEM_aluResult;
         WB_I_immed <= MEM_I_immed;
     end
                                
 //======================= BEGIN WRITEBACK STAGE ===========================//
 
-// Technically, the writeback stage uses the register file since it writes back to the registers 
+    logic [31:0] csr_reg;
     
-    //CSR registers and interrupt logic
-//    CSR CSRs(.clk(CLK),.rst(RESET),.intTaken(intTaken),.addr(IR[31:20]),.next_pc(pc),.wd(aluResult),.wr_en(csrWrite),
-//           .rd(csr_reg),.mepc(mepc),.mtvec(mtvec),.mie(mie));  
-
+    // Technically, the writeback stage uses the register file since it writes back to the registers 
    
     CSR CSRs(.clk(CLK),.rst(RESET),.intTaken(intTaken),.addr(WB_I_immed),.next_pc(MEM_WB_instr.pc),.wd(WB_aluResult),.wr_en(csrWrite),
            .rd(csr_reg),.mepc(mepc),.mtvec(mtvec),.mie(mie));  
@@ -326,7 +304,7 @@ module OTTER_MCU(input CLK,
     // WB_rfIn is connected to the reg file 
     logic [31:0] MEM_PC;
     assign MEM_PC = MEM_WB_instr.pc + 4;
-    
+    logic [31:0] WB_rfIn; 
     Mult4to1 regWriteback (MEM_PC,csr_reg, mem_data, WB_aluResult, MEM_WB_instr.rf_wr_sel, WB_rfIn);
     
 
@@ -347,25 +325,7 @@ module OTTER_MCU(input CLK,
     // ^ CHANGED IR[13:12] to mem_size_after FOR PROGRAMMER
     // ^ CHANGED IR[14] to mem_sign_after FOR PROGRAMMER
      
-     
-     //==== THE FSM WILL HAVE TO BE REPLACED BY DECODERS IN EACH STAGE ====//
-     
-     //logic prev_INT=0;
-     
-//     OTTER_CU_FSM CU_FSM (.CU_CLK(CLK), .CU_INT(INTR), .CU_RESET(RESET), .CU_OPCODE(opcode), //.CU_OPCODE(opcode),
-//                     .CU_FUNC3(IR[14:12]),.CU_FUNC12(IR[31:20]),
-//                     .CU_PCWRITE(pcWrite), .CU_REGWRITE(regWrite), .CU_MEMWRITE(memWrite), 
-//                     .CU_MEMREAD1(memRead1),.CU_MEMREAD2(memRead2),.CU_intTaken(intTaken),.CU_intCLR(intCLR),.CU_csrWrite(csrWrite),.CU_prevINT(prev_INT));
-    
-    
-    
-//    always_ff @ (posedge CLK)
-//    begin
-//         if(INTR && mie)
-//            prev_INT=1'b1;
-//         if(intCLR || RESET)
-//            prev_INT=1'b0;
-//    end
+
     //MMIO /////////////////////////////////////////////////////           
     assign IOBUS_ADDR = mem_addr_after;  // CHANGED FROM aluResult TO mem_addr_after FOR PROGRAMMER
     assign IOBUS_OUT = mem_data_after;  // CHANGED FROM B TO mem_data_after FOR PROGRAMMER 
