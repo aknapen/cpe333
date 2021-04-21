@@ -103,11 +103,11 @@ module OTTER_MCU(input CLK,
     // Creates a 6-to-1 multiplexor used to select the source of the next PC
     Mult6to1 PCdatasrc (next_pc, jalr_pc, branch_pc, jump_pc, mtvec, mepc, pc_source, pc_in);
        
-    assign pcWrite = 1; // since there will be no hazards, can write new PC value every CLK cycle
+    assign pcWrite = ~ld_haz; // only allow new PC through if we're not stalling
      
     //PC is byte-addressed but our memory is word addressed 
     ProgCount PC (.PC_CLK(CLK), .PC_RST(RESET), .PC_LD(pcWrite),
-                 .PC_DIN(pc_in), .PC_COUNT(pc_out));   
+                  .PC_DIN(pc_in), .PC_COUNT(pc_out));   
                  
     assign next_pc = pc_out + 4;    //PC is byte aligned, memory is word aligned (NEED TO CALC next_pc HERE SO IT'S READY BY NEXT INSTRUCTION                          
     assign memRead1 = 1; // can hardcode this to 1 since we always want to read an instr in the fetch stage
@@ -115,9 +115,12 @@ module OTTER_MCU(input CLK,
     //=======================  END FETCH STAGE ===========================//
     
     // PC REGISTER
-    always_ff @(posedge CLK) // transfers PC from fetch to decode
+    always_ff @(posedge CLK or posedge ld_haz) // transfers PC from fetch to decode
     begin
-        IF_ID_pc <= pc_out; // delay PC from fetch stage
+        if (ld_haz) 
+            IF_ID_pc <= 32'b0; // push through a zeroed PC on a NOP
+        else
+            IF_ID_pc <= pc_out; // delay PC from fetch stage
     end
     
    //======================= BEGIN DECODE STAGE ===========================//
@@ -135,7 +138,15 @@ module OTTER_MCU(input CLK,
     
     logic [1:0] wb_sel;
     
+    logic ld_haz; // used to detect a load-use hazard
     opcode_t opcode;
+    
+    // Load-Use Hazard Detection
+    always_comb
+    begin
+        ld_haz = 0;
+        if (DE_EX_instr.memRead2 && ((DE_EX_instr.rd_addr == IR[19:15])  || (DE_EX_instr.rd_addr = IR[24:20]))) ld_haz = 1;
+    end
     
     // Creates a RISC-V register file
     OTTER_registerFile RF (IR[19:15], IR[24:20], MEM_WB_instr.rd_addr, WB_rfIn, MEM_WB_instr.regWrite, rs1, rs2, CLK); // Register file
@@ -177,7 +188,7 @@ module OTTER_MCU(input CLK,
 
     logic [31:0] EX_A, EX_B, EX_IR, EX_RS2, EX_I_immed;
     always_ff @(posedge CLK) // to push ALU inputs and instruction from Decode to Execute stage
-    begin
+    begin // DO THESE NEED TO BE ZEROED OUT ON LOAD-USE HAZARD??? Don't think so b/c all control signals in instr_t should be 0
         EX_A <= DE_A;
         EX_B <= DE_B;
         EX_IR <= IR;
@@ -185,22 +196,25 @@ module OTTER_MCU(input CLK,
         EX_I_immed <= I_immed;
     end
     
-    always_ff @(posedge CLK) // to push struct info from Decode to Execute Stage
+    always_ff @(posedge CLK or posedge ld_haz) // to push struct info from Decode to Execute Stage
     begin
-        DE_EX_instr.opcode <= opcode;
-        DE_EX_instr.rs1_addr <= IR[19:15];
-        DE_EX_instr.rs2_addr <= IR[24:20];
-        DE_EX_instr.rd_addr <= IR[11:7];
-        DE_EX_instr.rs1_used <= rs1_used;
-        DE_EX_instr.rs2_used <= rs2_used;
-        DE_EX_instr.rd_used <= rd_used;
-        DE_EX_instr.alu_fun <= alu_fun;
-        DE_EX_instr.memWrite <= memWrite;
-        DE_EX_instr.memRead2 <= memRead2;
-        DE_EX_instr.regWrite <= regWrite;  
-        DE_EX_instr.rf_wr_sel <= wb_sel;
-        DE_EX_instr.mem_type <= IR[14:12]; // holds size and sign for memory module (funct3 in instruction)
-        DE_EX_instr.pc <= IF_ID_pc; // get pc value from fetch stage                                                                        
+        if (ld_haz) // Send NOP instruction through pipeline to stall on load-use hazard
+            DE_EX_instr <= 69'b0;
+        else
+            DE_EX_instr.opcode <= opcode;
+            DE_EX_instr.rs1_addr <= IR[19:15];
+            DE_EX_instr.rs2_addr <= IR[24:20];
+            DE_EX_instr.rd_addr <= IR[11:7];
+            DE_EX_instr.rs1_used <= rs1_used;
+            DE_EX_instr.rs2_used <= rs2_used;
+            DE_EX_instr.rd_used <= rd_used;
+            DE_EX_instr.alu_fun <= alu_fun;
+            DE_EX_instr.memWrite <= memWrite;
+            DE_EX_instr.memRead2 <= memRead2;
+            DE_EX_instr.regWrite <= regWrite;  
+            DE_EX_instr.rf_wr_sel <= wb_sel;
+            DE_EX_instr.mem_type <= IR[14:12]; // holds size and sign for memory module (funct3 in instruction)
+            DE_EX_instr.pc <= IF_ID_pc; // get pc value from fetch stage                                                                        
     end  
       
 //======================= BEGIN EXECUTE STAGE ===========================//
