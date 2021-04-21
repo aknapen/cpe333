@@ -217,6 +217,7 @@ module OTTER_MCU(input CLK,
     logic br_taken,br_lt,br_eq,br_ltu;
     
     logic [1:0] forward_sel_A, forward_sel_B; // MUX control signals to choose forwarded data
+    
     //Branch Condition Generator
     always_comb
     begin
@@ -253,8 +254,9 @@ module OTTER_MCU(input CLK,
     end
     
     // Generates select bits to choose between forwarded and non-forwarded data
-    Forwarding_Unit FU(.RS1(DE_EX_instr.rs1_addr), .RS2(DE_EX_instr.rs2_addr), .EX_MEM_RD(EX_MEM_instr.rd_addr), 
-                       .MEM_WB_RD(MEM_WB_intr.rd_addr), .SEL_A(forward_sel_A), .SEL_B(forward_sel_B));
+    Forwarding_Unit FU(.RS1(DE_EX_instr.rs1_addr), .RS1_USED(DE_EX_instr.rs1_used), .RS2(DE_EX_instr.rs2_addr), 
+                       .RS2_USED(DE_EX_instr.rs2_used), .EX_MEM_RD(EX_MEM_instr.rd_addr), .EX_MEM_REGWRITE(EX_MEM_instr.regWrite),
+                       .MEM_WB_RD(MEM_WB_intr.rd_addr), .MEM_WB_REGWRITE(MEM_WB_instr.regWrite), .SEL_A(forward_sel_A), .SEL_B(forward_sel_B));
     
     // Adding two 3-1 MUXes here to handle data hazards
     always_comb
