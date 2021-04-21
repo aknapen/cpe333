@@ -216,6 +216,7 @@ module OTTER_MCU(input CLK,
     
     logic br_taken,br_lt,br_eq,br_ltu;
     
+    logic [1:0] forward_sel_A, forward_sel_B; // MUX control signals to choose forwarded data
     //Branch Condition Generator
     always_comb
     begin
@@ -251,6 +252,31 @@ module OTTER_MCU(input CLK,
         endcase
     end
     
+    // Generates select bits to choose between forwarded and non-forwarded data
+    Forwarding_Unit FU(.RS1(DE_EX_instr.rs1_addr), .RS2(DE_EX_instr.rs2_addr), .EX_MEM_RD(EX_MEM_instr.rd_addr), 
+                       .MEM_WB_RD(MEM_WB_intr.rd_addr), .SEL_A(forward_sel_A), .SEL_B(forward_sel_B));
+    
+    // Adding two 3-1 MUXes here to handle data hazards
+    always_comb
+    begin
+        case (forward_sel_A)
+            2'b00: aluA = EX_A; // no forwarding was needed
+            2'b01: aluA = MEM_aluResult; // forwarding was needed from output going to memory stage
+            2'b10: aluA = WB_aluResult; // fowarding was needed from output going to writeback stage
+            default: aluA = EX_A;
+        endcase
+    end
+    
+    always_comb
+    begin
+        case (forward_sel_B)
+            2'b00: aluA = EX_B; // no forwarding was needed
+            2'b01: aluA = MEM_aluResult; // forwarding was needed from output going to memory stage
+            2'b10: aluA = WB_aluResult; // fowarding was needed from output going to writeback stage
+            default: aluA = EX_B;
+        endcase
+    end
+    
     // Creates a RISC-V ALU
     // Inputs are ALUCtl (the ALU control), ALU value inputs (ALUAin, ALUBin)
     // Outputs are ALUResultOut (the 64-bit output) and Zero (zero detection output)
@@ -277,7 +303,7 @@ module OTTER_MCU(input CLK,
     OTTER_mem_byte #(14) memory  (.MEM_CLK(CLK),.MEM_ADDR1(pc_out),.MEM_ADDR2(MEM_aluResult),.MEM_DIN2(MEM_RS2),
                                .MEM_WRITE2(EX_MEM_instr.memWrite),.MEM_READ1(memRead1),.MEM_READ2(EX_MEM_instr.memRead2),
                                .ERR(),.MEM_DOUT1(IR),.MEM_DOUT2(mem_data),.IO_IN(IOBUS_IN),.IO_WR(IOBUS_WR),.MEM_SIZE(EX_MEM_instr.mem_type[1:0]),.MEM_SIGN(mem_sign_after));
-
+    
 //======================= END MEMORY STAGE ===========================//
 
     logic [31:0] WB_aluResult, WB_I_immed;

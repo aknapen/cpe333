@@ -61,13 +61,15 @@ module OTTER_CU_Decoder(
        //DECODING  (does not depend on state)  ////////////////////////////////////////////
        //SEPERATE DECODER
         always_comb
+        begin
             case(CU_OPCODE)
                 OP_IMM: CU_ALU_FUN= (CU_FUNC3==3'b101)?{CU_FUNC7[5],CU_FUNC3}:{1'b0,CU_FUNC3};
                 LUI,SYSTEM: CU_ALU_FUN = 4'b1001;
                 OP: CU_ALU_FUN = {CU_FUNC7[5],CU_FUNC3};
                 default: CU_ALU_FUN = 4'b0;
             endcase
-            
+         end
+           
          always_comb
          begin
             //if(state==1 || state==2)
