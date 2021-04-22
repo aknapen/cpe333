@@ -1,0 +1,498 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wave_config>
+   <wave_state>
+   </wave_state>
+   <db_ref_list>
+      <db_ref path="clock_tb_behav.wdb" id="1">
+         <top_modules>
+            <top_module name="clock_tb" />
+            <top_module name="glbl" />
+         </top_modules>
+      </db_ref>
+   </db_ref_list>
+   <zoom_setting>
+      <ZoomStartTime time="54980000fs"></ZoomStartTime>
+      <ZoomEndTime time="55688001fs"></ZoomEndTime>
+      <Cursor1Time time="55490000fs"></Cursor1Time>
+   </zoom_setting>
+   <column_width_setting>
+      <NameColumnWidth column_width="188"></NameColumnWidth>
+      <ValueColumnWidth column_width="64"></ValueColumnWidth>
+   </column_width_setting>
+   <WVObjectSize size="13" />
+   <wvobject fp_name="/clock_tb/clk" type="logic">
+      <obj_property name="ElementShortName">clk</obj_property>
+      <obj_property name="ObjectShortName">clk</obj_property>
+   </wvobject>
+   <wvobject type="divider" fp_name="divider50">
+      <obj_property name="label">Fetch Stage</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+   </wvobject>
+   <wvobject fp_name="group51" type="group">
+      <obj_property name="label">Fetch Stage</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+      <wvobject fp_name="/clock_tb/DUT/MCU/memRead1" type="logic">
+         <obj_property name="ElementShortName">memRead1</obj_property>
+         <obj_property name="ObjectShortName">memRead1</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/pcWrite" type="logic">
+         <obj_property name="ElementShortName">pcWrite</obj_property>
+         <obj_property name="ObjectShortName">pcWrite</obj_property>
+      </wvobject>
+      <wvobject fp_name="group60" type="group">
+         <obj_property name="label">PC_MUX</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
+         <wvobject fp_name="/clock_tb/DUT/MCU/pc_source" type="array">
+            <obj_property name="ElementShortName">pc_source[2:0]</obj_property>
+            <obj_property name="ObjectShortName">pc_source[2:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/next_pc" type="array">
+            <obj_property name="ElementShortName">next_pc[31:0]</obj_property>
+            <obj_property name="ObjectShortName">next_pc[31:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/jalr_pc" type="array">
+            <obj_property name="ElementShortName">jalr_pc[31:0]</obj_property>
+            <obj_property name="ObjectShortName">jalr_pc[31:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/branch_pc" type="array">
+            <obj_property name="ElementShortName">branch_pc[31:0]</obj_property>
+            <obj_property name="ObjectShortName">branch_pc[31:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/jump_pc" type="array">
+            <obj_property name="ElementShortName">jump_pc[31:0]</obj_property>
+            <obj_property name="ObjectShortName">jump_pc[31:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/int_pc" type="array">
+            <obj_property name="ElementShortName">int_pc[31:0]</obj_property>
+            <obj_property name="ObjectShortName">int_pc[31:0]</obj_property>
+         </wvobject>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/pc_in" type="array">
+         <obj_property name="ElementShortName">pc_in[31:0]</obj_property>
+         <obj_property name="ObjectShortName">pc_in[31:0]</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/pc_out" type="array">
+         <obj_property name="ElementShortName">pc_out[31:0]</obj_property>
+         <obj_property name="ObjectShortName">pc_out[31:0]</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="divider" fp_name="divider46">
+      <obj_property name="label">Decode Stage</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+   </wvobject>
+   <wvobject fp_name="group52" type="group">
+      <obj_property name="label">Decode Stage</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject fp_name="/clock_tb/DUT/MCU/IR" type="array">
+         <obj_property name="ElementShortName">IR[31:0]</obj_property>
+         <obj_property name="ObjectShortName">IR[31:0]</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/opcode" type="array">
+         <obj_property name="ElementShortName">opcode[6:0]</obj_property>
+         <obj_property name="ObjectShortName">opcode[6:0]</obj_property>
+      </wvobject>
+      <wvobject fp_name="group128" type="group">
+         <obj_property name="label">Struct logic</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
+         <wvobject fp_name="/clock_tb/DUT/MCU/rs1_used" type="logic">
+            <obj_property name="ElementShortName">rs1_used</obj_property>
+            <obj_property name="ObjectShortName">rs1_used</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/rs2_used" type="logic">
+            <obj_property name="ElementShortName">rs2_used</obj_property>
+            <obj_property name="ObjectShortName">rs2_used</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/rd_used" type="logic">
+            <obj_property name="ElementShortName">rd_used</obj_property>
+            <obj_property name="ObjectShortName">rd_used</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/memWrite" type="logic">
+            <obj_property name="ElementShortName">memWrite</obj_property>
+            <obj_property name="ObjectShortName">memWrite</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/memRead2" type="logic">
+            <obj_property name="ElementShortName">memRead2</obj_property>
+            <obj_property name="ObjectShortName">memRead2</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/regWrite" type="logic">
+            <obj_property name="ElementShortName">regWrite</obj_property>
+            <obj_property name="ObjectShortName">regWrite</obj_property>
+         </wvobject>
+      </wvobject>
+      <wvobject fp_name="group153" type="group">
+         <obj_property name="label">RegFile</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
+         <obj_property name="isExpanded"></obj_property>
+         <wvobject fp_name="/clock_tb/DUT/MCU/RF/Read1" type="array">
+            <obj_property name="DisplayName">label</obj_property>
+            <obj_property name="ElementShortName">Read1[4:0]</obj_property>
+            <obj_property name="ObjectShortName">Read1[4:0]</obj_property>
+            <obj_property name="label">addr1</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/RF/Read2" type="array">
+            <obj_property name="DisplayName">label</obj_property>
+            <obj_property name="ElementShortName">Read2[4:0]</obj_property>
+            <obj_property name="ObjectShortName">Read2[4:0]</obj_property>
+            <obj_property name="label">addr2</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/RF/WriteReg" type="array">
+            <obj_property name="ElementShortName">WriteReg[4:0]</obj_property>
+            <obj_property name="ObjectShortName">WriteReg[4:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/RF/WriteData" type="array">
+            <obj_property name="ElementShortName">WriteData[31:0]</obj_property>
+            <obj_property name="ObjectShortName">WriteData[31:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/RF/RegWrite" type="logic">
+            <obj_property name="ElementShortName">RegWrite</obj_property>
+            <obj_property name="ObjectShortName">RegWrite</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/RF/Data1" type="array">
+            <obj_property name="DisplayName">label</obj_property>
+            <obj_property name="ElementShortName">Data1[31:0]</obj_property>
+            <obj_property name="ObjectShortName">Data1[31:0]</obj_property>
+            <obj_property name="label">rs1</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/RF/Data2" type="array">
+            <obj_property name="DisplayName">label</obj_property>
+            <obj_property name="ElementShortName">Data2[31:0]</obj_property>
+            <obj_property name="ObjectShortName">Data2[31:0]</obj_property>
+            <obj_property name="label">rs2</obj_property>
+         </wvobject>
+      </wvobject>
+      <wvobject fp_name="group94" type="group">
+         <obj_property name="label">Immediate Generator</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
+         <wvobject fp_name="/clock_tb/DUT/MCU/I_immed" type="array">
+            <obj_property name="ElementShortName">I_immed[31:0]</obj_property>
+            <obj_property name="ObjectShortName">I_immed[31:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/S_immed" type="array">
+            <obj_property name="ElementShortName">S_immed[31:0]</obj_property>
+            <obj_property name="ObjectShortName">S_immed[31:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/U_immed" type="array">
+            <obj_property name="ElementShortName">U_immed[31:0]</obj_property>
+            <obj_property name="ObjectShortName">U_immed[31:0]</obj_property>
+            <obj_property name="Radix">HEXRADIX</obj_property>
+         </wvobject>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/opA_sel" type="logic">
+         <obj_property name="ElementShortName">opA_sel</obj_property>
+         <obj_property name="ObjectShortName">opA_sel</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/DE_A" type="array">
+         <obj_property name="ElementShortName">DE_A[31:0]</obj_property>
+         <obj_property name="ObjectShortName">DE_A[31:0]</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/opB_sel" type="array">
+         <obj_property name="ElementShortName">opB_sel[1:0]</obj_property>
+         <obj_property name="ObjectShortName">opB_sel[1:0]</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/DE_B" type="array">
+         <obj_property name="ElementShortName">DE_B[31:0]</obj_property>
+         <obj_property name="ObjectShortName">DE_B[31:0]</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="divider" fp_name="divider42">
+      <obj_property name="label">Execute Stage</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+   </wvobject>
+   <wvobject fp_name="group43" type="group">
+      <obj_property name="label">Execute Stage</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+      <wvobject fp_name="/clock_tb/DUT/MCU/DE_EX_instr" type="array">
+         <obj_property name="ElementShortName">DE_EX_instr</obj_property>
+         <obj_property name="ObjectShortName">DE_EX_instr</obj_property>
+         <obj_property name="isExpanded"></obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/EX_IR" type="array">
+         <obj_property name="ElementShortName">EX_IR[31:0]</obj_property>
+         <obj_property name="ObjectShortName">EX_IR[31:0]</obj_property>
+      </wvobject>
+      <wvobject fp_name="group138" type="group">
+         <obj_property name="label">Target Gen</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
+         <wvobject fp_name="/clock_tb/DUT/MCU/jalr_pc" type="array">
+            <obj_property name="ElementShortName">jalr_pc[31:0]</obj_property>
+            <obj_property name="ObjectShortName">jalr_pc[31:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/branch_pc" type="array">
+            <obj_property name="ElementShortName">branch_pc[31:0]</obj_property>
+            <obj_property name="ObjectShortName">branch_pc[31:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/jump_pc" type="array">
+            <obj_property name="ElementShortName">jump_pc[31:0]</obj_property>
+            <obj_property name="ObjectShortName">jump_pc[31:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/int_pc" type="array">
+            <obj_property name="ElementShortName">int_pc[31:0]</obj_property>
+            <obj_property name="ObjectShortName">int_pc[31:0]</obj_property>
+         </wvobject>
+      </wvobject>
+      <wvobject fp_name="group139" type="group">
+         <obj_property name="label">BranchCond Gen</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
+         <wvobject fp_name="/clock_tb/DUT/MCU/pc_source" type="array">
+            <obj_property name="ElementShortName">pc_source[2:0]</obj_property>
+            <obj_property name="ObjectShortName">pc_source[2:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/br_taken" type="logic">
+            <obj_property name="ElementShortName">br_taken</obj_property>
+            <obj_property name="ObjectShortName">br_taken</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/br_lt" type="logic">
+            <obj_property name="ElementShortName">br_lt</obj_property>
+            <obj_property name="ObjectShortName">br_lt</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/br_eq" type="logic">
+            <obj_property name="ElementShortName">br_eq</obj_property>
+            <obj_property name="ObjectShortName">br_eq</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/br_ltu" type="logic">
+            <obj_property name="ElementShortName">br_ltu</obj_property>
+            <obj_property name="ObjectShortName">br_ltu</obj_property>
+         </wvobject>
+      </wvobject>
+      <wvobject fp_name="group265" type="group">
+         <obj_property name="label">Forwarding Unit</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
+         <obj_property name="isExpanded"></obj_property>
+         <wvobject fp_name="/clock_tb/DUT/MCU/FU/RS1" type="array">
+            <obj_property name="ElementShortName">RS1[4:0]</obj_property>
+            <obj_property name="ObjectShortName">RS1[4:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/FU/RS1_USED" type="logic">
+            <obj_property name="ElementShortName">RS1_USED</obj_property>
+            <obj_property name="ObjectShortName">RS1_USED</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/FU/RS2" type="array">
+            <obj_property name="ElementShortName">RS2[4:0]</obj_property>
+            <obj_property name="ObjectShortName">RS2[4:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/FU/RS2_USED" type="logic">
+            <obj_property name="ElementShortName">RS2_USED</obj_property>
+            <obj_property name="ObjectShortName">RS2_USED</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/FU/EX_MEM_RD" type="array">
+            <obj_property name="ElementShortName">EX_MEM_RD[4:0]</obj_property>
+            <obj_property name="ObjectShortName">EX_MEM_RD[4:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/FU/MEM_WB_RD" type="array">
+            <obj_property name="ElementShortName">MEM_WB_RD[4:0]</obj_property>
+            <obj_property name="ObjectShortName">MEM_WB_RD[4:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/FU/EX_MEM_REGWRITE" type="logic">
+            <obj_property name="ElementShortName">EX_MEM_REGWRITE</obj_property>
+            <obj_property name="ObjectShortName">EX_MEM_REGWRITE</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/FU/MEM_WB_REGWRITE" type="logic">
+            <obj_property name="ElementShortName">MEM_WB_REGWRITE</obj_property>
+            <obj_property name="ObjectShortName">MEM_WB_REGWRITE</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/FU/SEL_A" type="array">
+            <obj_property name="ElementShortName">SEL_A[1:0]</obj_property>
+            <obj_property name="ObjectShortName">SEL_A[1:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/FU/SEL_B" type="array">
+            <obj_property name="ElementShortName">SEL_B[1:0]</obj_property>
+            <obj_property name="ObjectShortName">SEL_B[1:0]</obj_property>
+         </wvobject>
+      </wvobject>
+      <wvobject fp_name="group140" type="group">
+         <obj_property name="label">ALU</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
+         <obj_property name="isExpanded"></obj_property>
+         <wvobject fp_name="/clock_tb/DUT/MCU/forward_sel_A" type="array">
+            <obj_property name="ElementShortName">forward_sel_A[1:0]</obj_property>
+            <obj_property name="ObjectShortName">forward_sel_A[1:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/aluA" type="array">
+            <obj_property name="ElementShortName">aluA[31:0]</obj_property>
+            <obj_property name="ObjectShortName">aluA[31:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/forward_sel_B" type="array">
+            <obj_property name="ElementShortName">forward_sel_B[1:0]</obj_property>
+            <obj_property name="ObjectShortName">forward_sel_B[1:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/aluB" type="array">
+            <obj_property name="ElementShortName">aluB[31:0]</obj_property>
+            <obj_property name="ObjectShortName">aluB[31:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/aluResult" type="array">
+            <obj_property name="ElementShortName">aluResult[31:0]</obj_property>
+            <obj_property name="ObjectShortName">aluResult[31:0]</obj_property>
+         </wvobject>
+      </wvobject>
+   </wvobject>
+   <wvobject type="divider" fp_name="divider44">
+      <obj_property name="label">Memory Stage</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+   </wvobject>
+   <wvobject fp_name="group53" type="group">
+      <obj_property name="label">Memory Stage</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject fp_name="/clock_tb/DUT/MCU/EX_MEM_instr" type="array">
+         <obj_property name="ElementShortName">EX_MEM_instr</obj_property>
+         <obj_property name="ObjectShortName">EX_MEM_instr</obj_property>
+         <obj_property name="isExpanded"></obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/memory/MEM_ADDR2" type="array">
+         <obj_property name="ElementShortName">MEM_ADDR2[31:0]</obj_property>
+         <obj_property name="ObjectShortName">MEM_ADDR2[31:0]</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/memory/memAddr2" type="array">
+         <obj_property name="ElementShortName">memAddr2[13:0]</obj_property>
+         <obj_property name="ObjectShortName">memAddr2[13:0]</obj_property>
+         <obj_property name="Radix">SIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/memory/memory[299]" type="array">
+         <obj_property name="ElementShortName">[299][31:0]</obj_property>
+         <obj_property name="ObjectShortName">[299][31:0]</obj_property>
+      </wvobject>
+   </wvobject>
+   <wvobject type="divider" fp_name="divider45">
+      <obj_property name="label">Writeback Stage</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+   </wvobject>
+   <wvobject fp_name="group54" type="group">
+      <obj_property name="label">Writeback Stage</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <obj_property name="isExpanded"></obj_property>
+      <wvobject fp_name="/clock_tb/DUT/MCU/MEM_WB_instr" type="array">
+         <obj_property name="ElementShortName">MEM_WB_instr</obj_property>
+         <obj_property name="ObjectShortName">MEM_WB_instr</obj_property>
+         <obj_property name="isExpanded"></obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/RF/RegWrite" type="logic">
+         <obj_property name="ElementShortName">RegWrite</obj_property>
+         <obj_property name="ObjectShortName">RegWrite</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/RF/WriteReg" type="array">
+         <obj_property name="ElementShortName">WriteReg[4:0]</obj_property>
+         <obj_property name="ObjectShortName">WriteReg[4:0]</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/RF/WriteData" type="array">
+         <obj_property name="ElementShortName">WriteData[31:0]</obj_property>
+         <obj_property name="ObjectShortName">WriteData[31:0]</obj_property>
+         <obj_property name="Radix">SIGNEDDECRADIX</obj_property>
+      </wvobject>
+      <wvobject fp_name="group515" type="group">
+         <obj_property name="label">Registers</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
+         <wvobject fp_name="/clock_tb/DUT/MCU/RF/RF[1]" type="array">
+            <obj_property name="DisplayName">label</obj_property>
+            <obj_property name="ElementShortName">[1][31:0]</obj_property>
+            <obj_property name="ObjectShortName">[1][31:0]</obj_property>
+            <obj_property name="label">RA</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/RF/RF[2]" type="array">
+            <obj_property name="DisplayName">label</obj_property>
+            <obj_property name="ElementShortName">[2][31:0]</obj_property>
+            <obj_property name="ObjectShortName">[2][31:0]</obj_property>
+            <obj_property name="label">SP</obj_property>
+            <obj_property name="Radix">SIGNEDDECRADIX</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/RF/RF[10]" type="array">
+            <obj_property name="DisplayName">label</obj_property>
+            <obj_property name="ElementShortName">[10][31:0]</obj_property>
+            <obj_property name="ObjectShortName">[10][31:0]</obj_property>
+            <obj_property name="label">A0</obj_property>
+            <obj_property name="Radix">SIGNEDDECRADIX</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/RF/RF[11]" type="array">
+            <obj_property name="DisplayName">label</obj_property>
+            <obj_property name="ElementShortName">[11][31:0]</obj_property>
+            <obj_property name="ObjectShortName">[11][31:0]</obj_property>
+            <obj_property name="label">A1</obj_property>
+            <obj_property name="Radix">SIGNEDDECRADIX</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/RF/RF[12]" type="array">
+            <obj_property name="DisplayName">label</obj_property>
+            <obj_property name="ElementShortName">[12][31:0]</obj_property>
+            <obj_property name="ObjectShortName">[12][31:0]</obj_property>
+            <obj_property name="label">A2</obj_property>
+            <obj_property name="Radix">SIGNEDDECRADIX</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/RF/RF[5]" type="array">
+            <obj_property name="DisplayName">label</obj_property>
+            <obj_property name="ElementShortName">[5][31:0]</obj_property>
+            <obj_property name="ObjectShortName">[5][31:0]</obj_property>
+            <obj_property name="label">T0</obj_property>
+            <obj_property name="Radix">SIGNEDDECRADIX</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/RF/RF[6]" type="array">
+            <obj_property name="DisplayName">label</obj_property>
+            <obj_property name="ElementShortName">[6][31:0]</obj_property>
+            <obj_property name="ObjectShortName">[6][31:0]</obj_property>
+            <obj_property name="label">T1</obj_property>
+            <obj_property name="Radix">SIGNEDDECRADIX</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/RF/RF[7]" type="array">
+            <obj_property name="DisplayName">label</obj_property>
+            <obj_property name="ElementShortName">[7][31:0]</obj_property>
+            <obj_property name="ObjectShortName">[7][31:0]</obj_property>
+            <obj_property name="label">T2</obj_property>
+            <obj_property name="Radix">SIGNEDDECRADIX</obj_property>
+         </wvobject>
+      </wvobject>
+      <wvobject fp_name="group517" type="group">
+         <obj_property name="label">WB Mux</obj_property>
+         <obj_property name="DisplayName">label</obj_property>
+         <wvobject fp_name="/clock_tb/DUT/MCU/WB_rfIn" type="array">
+            <obj_property name="ElementShortName">WB_rfIn[31:0]</obj_property>
+            <obj_property name="ObjectShortName">WB_rfIn[31:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/regWriteback/Sel" type="array">
+            <obj_property name="DisplayName">label</obj_property>
+            <obj_property name="ElementShortName">Sel[1:0]</obj_property>
+            <obj_property name="ObjectShortName">Sel[1:0]</obj_property>
+            <obj_property name="label">WB Mux Sel</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/MEM_PC" type="array">
+            <obj_property name="ElementShortName">MEM_PC[31:0]</obj_property>
+            <obj_property name="ObjectShortName">MEM_PC[31:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/csr_reg" type="array">
+            <obj_property name="ElementShortName">csr_reg[31:0]</obj_property>
+            <obj_property name="ObjectShortName">csr_reg[31:0]</obj_property>
+         </wvobject>
+         <wvobject fp_name="/clock_tb/DUT/MCU/WB_aluResult" type="array">
+            <obj_property name="ElementShortName">WB_aluResult[31:0]</obj_property>
+            <obj_property name="ObjectShortName">WB_aluResult[31:0]</obj_property>
+         </wvobject>
+      </wvobject>
+   </wvobject>
+   <wvobject type="divider" fp_name="divider521">
+      <obj_property name="label">Pipeline Overview</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+   </wvobject>
+   <wvobject fp_name="group209" type="group">
+      <obj_property name="label">Overview</obj_property>
+      <obj_property name="DisplayName">label</obj_property>
+      <wvobject fp_name="/clock_tb/DUT/MCU/pc_out" type="array">
+         <obj_property name="ElementShortName">pc_out[31:0]</obj_property>
+         <obj_property name="ObjectShortName">pc_out[31:0]</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/opcode" type="array">
+         <obj_property name="ElementShortName">opcode[6:0]</obj_property>
+         <obj_property name="ObjectShortName">opcode[6:0]</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/DE_EX_instr" type="array">
+         <obj_property name="ElementShortName">DE_EX_instr</obj_property>
+         <obj_property name="ObjectShortName">DE_EX_instr</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/EX_MEM_instr" type="array">
+         <obj_property name="ElementShortName">EX_MEM_instr</obj_property>
+         <obj_property name="ObjectShortName">EX_MEM_instr</obj_property>
+      </wvobject>
+      <wvobject fp_name="/clock_tb/DUT/MCU/MEM_WB_instr" type="array">
+         <obj_property name="ElementShortName">MEM_WB_instr</obj_property>
+         <obj_property name="ObjectShortName">MEM_WB_instr</obj_property>
+      </wvobject>
+   </wvobject>
+</wave_config>

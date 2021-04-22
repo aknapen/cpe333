@@ -231,14 +231,15 @@ module OTTER_MCU(input CLK,
     logic br_taken,br_lt,br_eq,br_ltu;
     
     logic [1:0] forward_sel_A, forward_sel_B; // MUX control signals to choose forwarded data
+    logic [31:0] aluA, aluB;
     
     //Branch Condition Generator
     always_comb
     begin
         br_lt=0; br_eq=0; br_ltu=0;
-        if($signed(EX_A) < $signed(EX_B)) br_lt=1;
-        if(EX_A==EX_B) br_eq=1;
-        if(EX_A<EX_B) br_ltu=1;
+        if($signed(aluA) < $signed(aluB)) br_lt=1;
+        if(aluA==aluB) br_eq=1;
+        if(aluA<aluB) br_ltu=1;
     end
     
     assign func_3 = EX_IR[14:12];
@@ -270,7 +271,7 @@ module OTTER_MCU(input CLK,
     // Generates select bits to choose between forwarded and non-forwarded data
     Forwarding_Unit FU(.RS1(DE_EX_instr.rs1_addr), .RS1_USED(DE_EX_instr.rs1_used), .RS2(DE_EX_instr.rs2_addr), 
                        .RS2_USED(DE_EX_instr.rs2_used), .EX_MEM_RD(EX_MEM_instr.rd_addr), .EX_MEM_REGWRITE(EX_MEM_instr.regWrite),
-                       .MEM_WB_RD(MEM_WB_intr.rd_addr), .MEM_WB_REGWRITE(MEM_WB_instr.regWrite), .SEL_A(forward_sel_A), .SEL_B(forward_sel_B));
+                       .MEM_WB_RD(MEM_WB_instr.rd_addr), .MEM_WB_REGWRITE(MEM_WB_instr.regWrite), .SEL_A(forward_sel_A), .SEL_B(forward_sel_B));
     
     // Adding two 3-1 MUXes here to handle data hazards
     always_comb
@@ -286,17 +287,17 @@ module OTTER_MCU(input CLK,
     always_comb
     begin
         case (forward_sel_B)
-            2'b00: aluA = EX_B; // no forwarding was needed
-            2'b01: aluA = MEM_aluResult; // forwarding was needed from output going to memory stage
-            2'b10: aluA = WB_aluResult; // fowarding was needed from output going to writeback stage
-            default: aluA = EX_B;
+            2'b00: aluB = EX_B; // no forwarding was needed
+            2'b01: aluB = MEM_aluResult; // forwarding was needed from output going to memory stage
+            2'b10: aluB = WB_aluResult; // fowarding was needed from output going to writeback stage
+            default: aluB = EX_B;
         endcase
     end
     
     // Creates a RISC-V ALU
     // Inputs are ALUCtl (the ALU control), ALU value inputs (ALUAin, ALUBin)
     // Outputs are ALUResultOut (the 64-bit output) and Zero (zero detection output)
-    OTTER_ALU ALU (DE_EX_instr.alu_fun, EX_A, EX_B, aluResult); // the ALU
+    OTTER_ALU ALU (DE_EX_instr.alu_fun, aluA, aluB, aluResult); // the ALU
     
 
 //======================= END EXECUTE STAGE ===========================//
