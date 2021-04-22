@@ -145,7 +145,7 @@ module OTTER_MCU(input CLK,
     always_comb
     begin
         ld_haz = 0;
-        if (DE_EX_instr.memRead2 && ((DE_EX_instr.rd_addr == IR[19:15])  || (DE_EX_instr.rd_addr = IR[24:20]))) ld_haz = 1;
+        if (memRead2 && ((DE_EX_instr.rd_addr == IR[19:15])  || (DE_EX_instr.rd_addr = IR[24:20]))) ld_haz = 1;
     end
     
     // Creates a RISC-V register file
@@ -196,26 +196,52 @@ module OTTER_MCU(input CLK,
         EX_I_immed <= I_immed;
     end
     
-    always_ff @(posedge CLK or posedge ld_haz) // to push struct info from Decode to Execute Stage
+    instr_t instr; // holds mux result for execute instruction
+    always_comb
     begin
-        if (ld_haz) // Send NOP instruction through pipeline to stall on load-use hazard
-            DE_EX_instr <= 69'b0;
+        if (ld_haz)
+            instr = 69'b0;
         else
-            DE_EX_instr.opcode <= opcode;
-            DE_EX_instr.rs1_addr <= IR[19:15];
-            DE_EX_instr.rs2_addr <= IR[24:20];
-            DE_EX_instr.rd_addr <= IR[11:7];
-            DE_EX_instr.rs1_used <= rs1_used;
-            DE_EX_instr.rs2_used <= rs2_used;
-            DE_EX_instr.rd_used <= rd_used;
-            DE_EX_instr.alu_fun <= alu_fun;
-            DE_EX_instr.memWrite <= memWrite;
-            DE_EX_instr.memRead2 <= memRead2;
-            DE_EX_instr.regWrite <= regWrite;  
-            DE_EX_instr.rf_wr_sel <= wb_sel;
-            DE_EX_instr.mem_type <= IR[14:12]; // holds size and sign for memory module (funct3 in instruction)
-            DE_EX_instr.pc <= IF_ID_pc; // get pc value from fetch stage                                                                        
-    end  
+            instr.opcode = opcode;
+            instr.rs1_addr = IR[19:15];
+            instr.rs2_addr = IR[24:20];
+            instr.rd_addr = IR[11:7];
+            instr.rs1_used = rs1_used;
+            instr.rs2_used = rs2_used;
+            instr.rd_used = rd_used;
+            instr.alu_fun = alu_fun;
+            instr.memWrite = memWrite;
+            instr.memRead2 = memRead2;
+            instr.regWrite = regWrite;  
+            instr.rf_wr_sel = wb_sel;
+            instr.mem_type = IR[14:12]; // holds size and sign for memory module (funct3 in instruction)
+            instr.pc = IF_ID_pc; // get pc value from fetch stage
+    end
+    
+//    always_ff @(posedge CLK or posedge ld_haz) // to push struct info from Decode to Execute Stage
+//    begin
+//        if (ld_haz) // Send NOP instruction through pipeline to stall on load-use hazard
+//            DE_EX_instr <= 69'b0;
+//        else
+//            DE_EX_instr.opcode <= opcode;
+//            DE_EX_instr.rs1_addr <= IR[19:15];
+//            DE_EX_instr.rs2_addr <= IR[24:20];
+//            DE_EX_instr.rd_addr <= IR[11:7];
+//            DE_EX_instr.rs1_used <= rs1_used;
+//            DE_EX_instr.rs2_used <= rs2_used;
+//            DE_EX_instr.rd_used <= rd_used;
+//            DE_EX_instr.alu_fun <= alu_fun;
+//            DE_EX_instr.memWrite <= memWrite;
+//            DE_EX_instr.memRead2 <= memRead2;
+//            DE_EX_instr.regWrite <= regWrite;  
+//            DE_EX_instr.rf_wr_sel <= wb_sel;
+//            DE_EX_instr.mem_type <= IR[14:12]; // holds size and sign for memory module (funct3 in instruction)
+//            DE_EX_instr.pc <= IF_ID_pc; // get pc value from fetch stage                                                                        
+//    end  
+    always_ff @(posedge CLK)
+    begin
+        DE_EX_instr <= instr;
+    end
       
 //======================= BEGIN EXECUTE STAGE ===========================//
     logic [2:0] func_3; // needed for checking branch conditions
