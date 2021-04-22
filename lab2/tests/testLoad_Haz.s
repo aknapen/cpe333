@@ -10,18 +10,10 @@
 	addi a1, zero, 1
 
 tests:	
-	nop
-	nop
 	#Load test
-	auipc	t0,0x0 
-	nop
-	nop
+	auipc	t0,0x0
 	addi	t0,t0,64 # PC+64=0x50 <TEST>
-	nop
-	nop
 	lw t1, 0(t0)
-	nop
-	nop
 	bne t1, a0, fail
 	nop
 	nop
@@ -32,3 +24,5 @@ tests:
 
 fail:
 	j fail
+	nop
+	nop

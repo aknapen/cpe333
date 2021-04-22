@@ -5,9 +5,9 @@ module Forwarding_Unit (
   );
     
   typedef enum {
-    NO_HAZ,
-    MEM_HAZ,
-    WB_HAZ
+    NO_HAZ, // 3'b000
+    MEM_HAZ, // 3'b001
+    WB_HAZ // 3'b010
   } hazard_t;
   
   // Hazard detection for ALU input A
