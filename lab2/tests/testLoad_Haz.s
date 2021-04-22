@@ -12,7 +12,7 @@
 tests:	
 	#Load test
 	auipc	t0,0x0
-	addi	t0,t0,64 # PC+64=0x50 <TEST>
+	addi	t0,t0,56 # PC+64=0x50 <TEST>
 	lw t1, 0(t0)
 	bne t1, a0, fail
 	nop
