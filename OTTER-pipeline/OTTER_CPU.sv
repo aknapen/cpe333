@@ -42,7 +42,8 @@ module OTTER_MCU(input CLK,
         STORE    = 7'b0100011,
         OP_IMM   = 7'b0010011,
         OP       = 7'b0110011,
-        SYSTEM   = 7'b1110011
+        SYSTEM   = 7'b1110011,
+        NOP      = 7'b0000000
     } opcode_t;
     
     // struct for storing a given pipeline stage's instruction and PC value\
@@ -60,6 +61,7 @@ module OTTER_MCU(input CLK,
         logic regWrite;
         logic [1:0] rf_wr_sel;
         logic [2:0] mem_type;  //sign, size
+        logic ld_haz;
         logic [31:0] pc;
     } instr_t;
         
@@ -87,6 +89,7 @@ module OTTER_MCU(input CLK,
     instr_t DE_EX_instr;
     instr_t EX_MEM_instr;
     instr_t MEM_WB_instr;
+    instr_t NO_OP = 69'b0;
     
     logic [31:0] IF_ID_pc;
       
@@ -99,7 +102,7 @@ module OTTER_MCU(input CLK,
     logic pcWrite;
     logic [2:0] pc_source;
     logic memRead1;
-    
+        
     // Creates a 6-to-1 multiplexor used to select the source of the next PC
     Mult6to1 PCdatasrc (next_pc, jalr_pc, branch_pc, jump_pc, mtvec, mepc, pc_source, pc_in);
        
@@ -110,17 +113,22 @@ module OTTER_MCU(input CLK,
                   .PC_DIN(pc_in), .PC_COUNT(pc_out));   
                  
     assign next_pc = pc_out + 4;    //PC is byte aligned, memory is word aligned (NEED TO CALC next_pc HERE SO IT'S READY BY NEXT INSTRUCTION                          
-    assign memRead1 = 1; // can hardcode this to 1 since we always want to read an instr in the fetch stage
+    assign memRead1 = ~ld_haz; // can hardcode this to 1 since we always want to read an instr in the fetch stage
    
     //=======================  END FETCH STAGE ===========================//
     
-    // PC REGISTER
-    always_ff @(posedge CLK or posedge ld_haz) // transfers PC from fetch to decode
+    logic [31:0] fetch_pc;
+    
+    always_comb
     begin
-        if (ld_haz) 
-            IF_ID_pc <= 32'b0; // push through a zeroed PC on a NOP
-        else
-            IF_ID_pc <= pc_out; // delay PC from fetch stage
+        fetch_pc = pc_out;
+        if (ld_haz) fetch_pc = 32'b0;
+    end
+    
+    // PC REGISTER
+    always_ff @(posedge CLK) // transfers PC from fetch to decode
+    begin
+        IF_ID_pc <= fetch_pc; // delay PC from fetch stage
     end
     
    //======================= BEGIN DECODE STAGE ===========================//
@@ -145,7 +153,7 @@ module OTTER_MCU(input CLK,
     always_comb
     begin
         ld_haz = 0;
-        if (memRead2 && ((DE_EX_instr.rd_addr == IR[19:15])  || (DE_EX_instr.rd_addr = IR[24:20]))) ld_haz = 1;
+        if (memRead2 && ((DE_EX_instr.rd_addr == IR[19:15])  || (DE_EX_instr.rd_addr == IR[24:20]))) ld_haz = 1;
     end
     
     // Creates a RISC-V register file
@@ -170,7 +178,6 @@ module OTTER_MCU(input CLK,
     assign memRead2 = (opcode == LOAD) ? 1 : 0; // only enable read from mem on a load instruction
     assign regWrite = ((opcode != BRANCH) && // no rd for BRANCH or STORE instructions
                        (opcode != STORE)) ? 1 : 0;                                                           
-    
     // Generate immediates
     assign S_immed = {{20{IR[31]}},IR[31:25],IR[11:7]};
     assign I_immed = {{20{IR[31]}},IR[31:20]};
@@ -196,48 +203,28 @@ module OTTER_MCU(input CLK,
         EX_I_immed <= I_immed;
     end
     
-    instr_t instr; // holds mux result for execute instruction
+    instr_t instr;
     always_comb
     begin
-        if (ld_haz)
-            instr = 69'b0;
-        else
-            instr.opcode = opcode;
-            instr.rs1_addr = IR[19:15];
-            instr.rs2_addr = IR[24:20];
-            instr.rd_addr = IR[11:7];
-            instr.rs1_used = rs1_used;
-            instr.rs2_used = rs2_used;
-            instr.rd_used = rd_used;
-            instr.alu_fun = alu_fun;
-            instr.memWrite = memWrite;
-            instr.memRead2 = memRead2;
-            instr.regWrite = regWrite;  
-            instr.rf_wr_sel = wb_sel;
-            instr.mem_type = IR[14:12]; // holds size and sign for memory module (funct3 in instruction)
-            instr.pc = IF_ID_pc; // get pc value from fetch stage
+        instr = 70'b0; // holds mux result for execute instruction
+        if (~ld_haz)
+            instr.opcode <= opcode;
+            instr.rs1_addr <= IR[19:15];
+            instr.rs2_addr <= IR[24:20];
+            instr.rd_addr <= IR[11:7];
+            instr.rs1_used <= rs1_used;
+            instr.rs2_used <= rs2_used;
+            instr.rd_used <= rd_used;
+            instr.alu_fun <= alu_fun;
+            instr.memWrite <= memWrite;
+            instr.memRead2 <= memRead2;
+            instr.regWrite <= regWrite;  
+            instr.rf_wr_sel <= wb_sel;
+            instr.mem_type <= IR[14:12]; // holds size and sign for memory module (funct3 in instruction)
+            instr.ld_haz <= ld_haz;
+            instr.pc <= IF_ID_pc; // get pc value from fetch stage   
     end
-    
-//    always_ff @(posedge CLK or posedge ld_haz) // to push struct info from Decode to Execute Stage
-//    begin
-//        if (ld_haz) // Send NOP instruction through pipeline to stall on load-use hazard
-//            DE_EX_instr <= 69'b0;
-//        else
-//            DE_EX_instr.opcode <= opcode;
-//            DE_EX_instr.rs1_addr <= IR[19:15];
-//            DE_EX_instr.rs2_addr <= IR[24:20];
-//            DE_EX_instr.rd_addr <= IR[11:7];
-//            DE_EX_instr.rs1_used <= rs1_used;
-//            DE_EX_instr.rs2_used <= rs2_used;
-//            DE_EX_instr.rd_used <= rd_used;
-//            DE_EX_instr.alu_fun <= alu_fun;
-//            DE_EX_instr.memWrite <= memWrite;
-//            DE_EX_instr.memRead2 <= memRead2;
-//            DE_EX_instr.regWrite <= regWrite;  
-//            DE_EX_instr.rf_wr_sel <= wb_sel;
-//            DE_EX_instr.mem_type <= IR[14:12]; // holds size and sign for memory module (funct3 in instruction)
-//            DE_EX_instr.pc <= IF_ID_pc; // get pc value from fetch stage                                                                        
-//    end  
+
     always_ff @(posedge CLK)
     begin
         DE_EX_instr <= instr;
@@ -297,15 +284,17 @@ module OTTER_MCU(input CLK,
     // Generates select bits to choose between forwarded and non-forwarded data
     Forwarding_Unit FU(.RS1(DE_EX_instr.rs1_addr), .RS1_USED(DE_EX_instr.rs1_used), .RS2(DE_EX_instr.rs2_addr), 
                        .RS2_USED(DE_EX_instr.rs2_used), .EX_MEM_RD(EX_MEM_instr.rd_addr), .EX_MEM_REGWRITE(EX_MEM_instr.regWrite),
-                       .MEM_WB_RD(MEM_WB_instr.rd_addr), .MEM_WB_REGWRITE(MEM_WB_instr.regWrite), .SEL_A(forward_sel_A), .SEL_B(forward_sel_B));
+                       .MEM_WB_RD(MEM_WB_instr.rd_addr), .MEM_WB_REGWRITE(MEM_WB_instr.regWrite), .LD_HAZ(MEM_WB_instr.ld_haz), 
+                       .SEL_A(forward_sel_A), .SEL_B(forward_sel_B));
     
     // Adding two 3-1 MUXes here to handle data hazards
     always_comb
     begin
         case (forward_sel_A)
             2'b00: aluA = EX_A; // no forwarding was needed
-            2'b01: aluA = MEM_aluResult; // forwarding was needed from output going to memory stage
-            2'b10: aluA = WB_aluResult; // fowarding was needed from output going to writeback stage
+            2'b01: aluA = MEM_aluResult; // forwarding was needed from ALU output going to memory stage
+            2'b10: aluA = WB_aluResult; // fowarding was needed from ALU output going to writeback stage
+            2'b11: aluA = mem_data; // forwarding was needed from data being loaded from memory module
             default: aluA = EX_A;
         endcase
     end
@@ -314,8 +303,9 @@ module OTTER_MCU(input CLK,
     begin
         case (forward_sel_B)
             2'b00: aluB = EX_B; // no forwarding was needed
-            2'b01: aluB = MEM_aluResult; // forwarding was needed from output going to memory stage
-            2'b10: aluB = WB_aluResult; // fowarding was needed from output going to writeback stage
+            2'b01: aluB = MEM_aluResult; // forwarding was needed from ALU output going to memory stage
+            2'b10: aluB = WB_aluResult; // fowarding was needed from ALU output going to writeback stage
+            2'b11: aluB = mem_data; // forwarding was needed from data being loaded from memory module
             default: aluB = EX_B;
         endcase
     end
