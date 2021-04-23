@@ -9,31 +9,20 @@
 	addi a0, zero, 50 #50 is an arbitrary number, most tests will end up with a result of 50 to keep things simple
 	addi a1, zero, 1
 
-tests:	
-	nop
-	nop
+tests:
 	#Store test
-	auipc	t0,0x0 
-	nop
-	nop
-	addi	t0,t0,84 # 64 <TEST>
-	nop
-	nop
+	auipc	t0,0x0
+	addi	t0, t0, 52 # 64 <TEST>
 	sw a0, 0(t0)
-	nop
-	nop
-	nop
-	nop
 	lw t1, 0(t0)
-	nop
-	nop
 	bne t1, a0, fail
 	nop
 	nop
-	
 	j tests
 	nop
 	nop
 
 fail:
 	j fail
+	nop
+	nop
