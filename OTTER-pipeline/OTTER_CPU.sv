@@ -63,6 +63,8 @@ module OTTER_MCU(input CLK,
         logic [2:0] mem_type;  //sign, size
         logic ld_haz;
         logic [31:0] pc;
+        logic invalid;
+        logic br_taken;
     } instr_t;
         
     // ************************ BEGIN PROGRAMMER ************************ 
@@ -206,9 +208,12 @@ module OTTER_MCU(input CLK,
     instr_t instr;
     always_comb
     begin
-        instr = 70'b0; // holds mux result for execute instruction
+        instr = 72'b0; // holds mux result for execute instruction
+        instr.invalid <= 0;
         if (~ld_haz)
             instr.opcode <= opcode;
+//            instr.invalid <= EX_MEM_instr.br_taken || MEM_WB_instr.br_taken; // Instruction invalid if either of prev2 instructions took a branch
+            instr.invalid <= br_taken || jump_taken || MEM_WB_instr.br_taken; // Instruction invalid if either of prev2 instructions took a branch
             instr.rs1_addr <= IR[19:15];
             instr.rs2_addr <= IR[24:20];
             instr.rd_addr <= IR[11:7];
@@ -216,13 +221,14 @@ module OTTER_MCU(input CLK,
             instr.rs2_used <= rs2_used;
             instr.rd_used <= rd_used;
             instr.alu_fun <= alu_fun;
-            instr.memWrite <= memWrite;
+            instr.memWrite <= memWrite & ~instr.invalid; // If instruction is invalid don't write to mem
             instr.memRead2 <= memRead2;
-            instr.regWrite <= regWrite;  
+            instr.regWrite <= regWrite & ~instr.invalid;;  // If instruction is invalid don't write to reg
             instr.rf_wr_sel <= wb_sel;
             instr.mem_type <= IR[14:12]; // holds size and sign for memory module (funct3 in instruction)
             instr.ld_haz <= ld_haz;
-            instr.pc <= IF_ID_pc; // get pc value from fetch stage   
+            instr.pc <= IF_ID_pc; // get pc value from fetch stage
+            instr.br_taken <= 0;   
     end
 
     always_ff @(posedge CLK)
@@ -242,6 +248,7 @@ module OTTER_MCU(input CLK,
     assign int_pc = 0;
     
     logic br_taken,br_lt,br_eq,br_ltu;
+    logic jump_taken;
     
     logic [1:0] forward_sel_A, forward_sel_B; // MUX control signals to choose forwarded data
     logic [31:0] aluA, aluB;
@@ -268,6 +275,11 @@ module OTTER_MCU(input CLK,
             3'b111: br_taken = ~br_ltu;   //BGEU
             default: br_taken =0;
         endcase
+        case(DE_EX_instr.opcode)    // We only want to signal branch taken if operation is a branch
+            BRANCH: br_taken = br_taken && ~DE_EX_instr.invalid;    // Nullify Branch generation
+            default: br_taken = 0;
+        endcase
+//        EX_MEM_instr.br_taken <= br_taken;             // Used to identify branches
     end
     
     always_comb // PC_Source generation
@@ -275,10 +287,14 @@ module OTTER_MCU(input CLK,
         case (DE_EX_instr.opcode)
             JALR: pc_source = 3'b001;
             BRANCH: pc_source = (br_taken) ? 3'b010 : 3'b000;
-            JAL: pc_source = 3'b011;
+            JAL:    begin 
+                        pc_source = 3'b011;
+                        jump_taken = 1;           // Not technically a branch but need to signal to nullify next instructions
+                    end
             SYSTEM: pc_source = (func_3==3'b000)? 3'b101:3'b000; // func_3 = 3'b000 => mret
             default: pc_source = 3'b000;
         endcase
+        if (DE_EX_instr.invalid) pc_source = 3'b000;    // If our instruction is invalid don't do target generation
     end
     
     // Generates select bits to choose between forwarded and non-forwarded data
@@ -323,6 +339,7 @@ module OTTER_MCU(input CLK,
     always_ff @(posedge CLK) // to push intsr_t through the pipeline stages
     begin
         EX_MEM_instr <= DE_EX_instr;
+        EX_MEM_instr.br_taken <= (br_taken || jump_taken);
         MEM_aluResult <= aluResult;   
         MEM_RS2 <= EX_RS2; // Need this for din2 into memory
         MEM_I_immed <= EX_I_immed; // Need this for CSR
@@ -330,7 +347,7 @@ module OTTER_MCU(input CLK,
     
 //======================= BEGIN MEMORY STAGE ===========================//
     logic [31:0] mem_data;
- 
+    
     // Sets up memory for the fetch stage and for memory accessing in Memory stage
     // In the future need to check on IO and Programmer stuff
     OTTER_mem_byte #(14) memory  (.MEM_CLK(CLK),.MEM_ADDR1(pc_out),.MEM_ADDR2(MEM_aluResult),.MEM_DIN2(MEM_RS2),

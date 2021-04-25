@@ -13,37 +13,23 @@ tests:
 	
 	#BEQ test
 	beq zero, a0, fail
-	nop
-	nop
 	
 	#BNE test
 	bne zero, zero, fail
-	nop
-	nop
 	
 	#BLT test
 	blt a0, zero, fail
-	nop
-	nop
 	
 	#BGE test
 	bge zero, a0, fail
-	nop
-	nop
 	
 	#BLTU test
 	bltu a2, zero, fail
-	nop
-	nop
 	
 	#BGEU test
 	bgeu zero, a2, fail
-	nop
-	nop
 	
 	j tests
-	nop
-	nop
 
 fail:
 	j fail
