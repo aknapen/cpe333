@@ -247,7 +247,7 @@ module OTTER_MCU(input CLK,
     logic [31:0] aluResult;
     
     //pc target calculations
-    assign jalr_pc = EX_I_immed + EX_A;
+    assign jalr_pc = EX_I_immed + aluA;
     //assign branch_pc = pc + {{21{IR[31]}},IR[7],IR[30:25],IR[11:8] ,1'b0};   //word aligned addresses
     assign branch_pc = DE_EX_instr.pc + {{20{EX_IR[31]}},EX_IR[7],EX_IR[30:25],EX_IR[11:8],1'b0};   //byte aligned addresses
     assign jump_pc = DE_EX_instr.pc + {{12{EX_IR[31]}}, EX_IR[19:12], EX_IR[20],EX_IR[30:21],1'b0};
