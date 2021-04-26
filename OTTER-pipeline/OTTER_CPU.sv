@@ -196,6 +196,7 @@ module OTTER_MCU(input CLK,
 //======================= END DECODE STAGE ===========================//
 
     logic [31:0] EX_A, EX_B, EX_IR, EX_RS2, EX_I_immed;
+//    logic invalid_decode;
     always_ff @(posedge CLK) // to push ALU inputs and instruction from Decode to Execute stage
     begin // DO THESE NEED TO BE ZEROED OUT ON LOAD-USE HAZARD??? Don't think so b/c all control signals in instr_t should be 0
         EX_A <= DE_A;
@@ -205,15 +206,20 @@ module OTTER_MCU(input CLK,
         EX_I_immed <= I_immed;
     end
     
+//    always_comb
+//    begin
+//        invalid_decode <= 0;
+//    end
+    
     instr_t instr;
     always_comb
     begin
         instr = 72'b0; // holds mux result for execute instruction
-        instr.invalid <= 0;
+        instr.invalid = 0;
         if (~ld_haz)
             instr.opcode <= opcode;
 //            instr.invalid <= EX_MEM_instr.br_taken || MEM_WB_instr.br_taken; // Instruction invalid if either of prev2 instructions took a branch
-            instr.invalid <= jb_taken || EX_MEM_instr.br_taken; // Instruction invalid if either of prev2 instructions took a branch
+            instr.invalid = (jb_taken) || (EX_MEM_instr.br_taken); // Instruction invalid if either of prev2 instructions took a branch
             instr.rs1_addr <= IR[19:15];
             instr.rs2_addr <= IR[24:20];
             instr.rd_addr <= IR[11:7];
@@ -221,9 +227,9 @@ module OTTER_MCU(input CLK,
             instr.rs2_used <= rs2_used;
             instr.rd_used <= rd_used;
             instr.alu_fun <= alu_fun;
-            instr.memWrite <= memWrite & ~instr.invalid; // If instruction is invalid don't write to mem
+            instr.memWrite = (memWrite) && (~instr.invalid); // If instruction is invalid don't write to mem
             instr.memRead2 <= memRead2;
-            instr.regWrite <= regWrite & ~instr.invalid;;  // If instruction is invalid don't write to reg
+            instr.regWrite = (regWrite) && (~instr.invalid);  // If instruction is invalid don't write to reg
             instr.rf_wr_sel <= wb_sel;
             instr.mem_type <= IR[14:12]; // holds size and sign for memory module (funct3 in instruction)
             instr.ld_haz <= ld_haz;
