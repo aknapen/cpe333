@@ -213,7 +213,7 @@ module OTTER_MCU(input CLK,
         if (~ld_haz)
             instr.opcode <= opcode;
 //            instr.invalid <= EX_MEM_instr.br_taken || MEM_WB_instr.br_taken; // Instruction invalid if either of prev2 instructions took a branch
-            instr.invalid <= br_taken || jump_taken || MEM_WB_instr.br_taken; // Instruction invalid if either of prev2 instructions took a branch
+            instr.invalid <= jb_taken || DE_EX_instr.br_taken; // Instruction invalid if either of prev2 instructions took a branch
             instr.rs1_addr <= IR[19:15];
             instr.rs2_addr <= IR[24:20];
             instr.rd_addr <= IR[11:7];
@@ -248,7 +248,7 @@ module OTTER_MCU(input CLK,
     assign int_pc = 0;
     
     logic br_taken,br_lt,br_eq,br_ltu;
-    logic jump_taken;
+    logic jump_taken, jb_taken;
     
     logic [1:0] forward_sel_A, forward_sel_B; // MUX control signals to choose forwarded data
     logic [31:0] aluA, aluB;
@@ -266,6 +266,7 @@ module OTTER_MCU(input CLK,
     
     always_comb // determine if a branch will be taken
     begin
+        br_taken = 0;
         case(func_3)
             3'b000: br_taken = br_eq;     //BEQ 
             3'b001: br_taken = ~br_eq;    //BNE
@@ -275,8 +276,8 @@ module OTTER_MCU(input CLK,
             3'b111: br_taken = ~br_ltu;   //BGEU
             default: br_taken =0;
         endcase
-        case(DE_EX_instr.opcode)    // We only want to signal branch taken if operation is a branch
-            BRANCH: br_taken = br_taken && ~DE_EX_instr.invalid;    // Nullify Branch generation
+        case(DE_EX_instr.opcode)    
+            BRANCH: br_taken = br_taken;    // Make sure only Branches put up branch taken flag
             default: br_taken = 0;
         endcase
 //        EX_MEM_instr.br_taken <= br_taken;             // Used to identify branches
@@ -284,6 +285,7 @@ module OTTER_MCU(input CLK,
     
     always_comb // PC_Source generation
     begin
+        jump_taken = 0;
         case (DE_EX_instr.opcode)
             JALR: pc_source = 3'b001;
             BRANCH: pc_source = (br_taken) ? 3'b010 : 3'b000;
@@ -336,10 +338,17 @@ module OTTER_MCU(input CLK,
     logic [31:0] MEM_aluResult;
     logic [31:0] MEM_RS2, MEM_I_immed;
     
+    always_comb
+    begin
+        jb_taken = 0;
+        jb_taken <= (br_taken || jump_taken) && (~DE_EX_instr.invalid); // Make sure we don't take branches if invalid instruction
+    end
+    
+    
     always_ff @(posedge CLK) // to push intsr_t through the pipeline stages
     begin
         EX_MEM_instr <= DE_EX_instr;
-        EX_MEM_instr.br_taken <= (br_taken || jump_taken);
+        EX_MEM_instr.br_taken <= jb_taken;
         MEM_aluResult <= aluResult;   
         MEM_RS2 <= EX_RS2; // Need this for din2 into memory
         MEM_I_immed <= EX_I_immed; // Need this for CSR

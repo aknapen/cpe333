@@ -11,24 +11,14 @@ tests:
 	nop
 	#jal test
 	jal t0, skip
-	nop
-	nop
 	beq zero, zero, fail
 	skip:
-	nop
-	nop
 	
 	#jalr test
 	jalr t0, 0(a1)
-	nop
-	nop
 	beq zero, zero, fail
-	nop
-	nop
 	
 	j tests
-	nop
-	nop
 
 fail:
 	j fail
