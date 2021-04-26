@@ -213,7 +213,7 @@ module OTTER_MCU(input CLK,
         if (~ld_haz)
             instr.opcode <= opcode;
 //            instr.invalid <= EX_MEM_instr.br_taken || MEM_WB_instr.br_taken; // Instruction invalid if either of prev2 instructions took a branch
-            instr.invalid <= jb_taken || DE_EX_instr.br_taken; // Instruction invalid if either of prev2 instructions took a branch
+            instr.invalid <= jb_taken || EX_MEM_instr.br_taken; // Instruction invalid if either of prev2 instructions took a branch
             instr.rs1_addr <= IR[19:15];
             instr.rs2_addr <= IR[24:20];
             instr.rd_addr <= IR[11:7];
@@ -287,7 +287,11 @@ module OTTER_MCU(input CLK,
     begin
         jump_taken = 0;
         case (DE_EX_instr.opcode)
-            JALR: pc_source = 3'b001;
+            JALR:   begin
+                        pc_source = 3'b001;
+                        jump_taken = 1;
+                    end
+            
             BRANCH: pc_source = (br_taken) ? 3'b010 : 3'b000;
             JAL:    begin 
                         pc_source = 3'b011;
