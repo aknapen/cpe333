@@ -22,7 +22,8 @@
 //The sole purpose of this file is to establish a clock for simulations
 
 module clock_tb();
-
+    
+    logic [31:0] SWITCHES;
     // 100MHz clock
     logic clk = 0;
     initial begin
@@ -30,6 +31,8 @@ module clock_tb();
         forever #10 clk = ~clk;
     end
     
+    assign SWITCHES = 32'b0;
+    
     //if your clock signal in OTTER_Wrapper is named something other than "CLK", change it here
-    OTTER_Wrapper_Programmable DUT(.CLK(clk));
+    OTTER_Wrapper_Programmable DUT(.CLK(clk), .SWITCHES(SWITCHES));
 endmodule
