@@ -115,7 +115,7 @@ module OTTER_MCU(input CLK,
                   .PC_DIN(pc_in), .PC_COUNT(pc_out));   
                  
     assign next_pc = pc_out + 4;    //PC is byte aligned, memory is word aligned (NEED TO CALC next_pc HERE SO IT'S READY BY NEXT INSTRUCTION                          
-    assign memRead1 = ~ld_haz; // can hardcode this to 1 since we always want to read an instr in the fetch stage
+    assign memRead1 = 1; // can hardcode this to 1 since we always want to read an instr in the fetch stage
    
     //=======================  END FETCH STAGE ===========================//
     
@@ -155,7 +155,7 @@ module OTTER_MCU(input CLK,
     always_comb
     begin
         ld_haz = 0;
-        if (memRead2 && ((DE_EX_instr.rd_addr == IR[19:15])  || (DE_EX_instr.rd_addr == IR[24:20]))) ld_haz = 1;
+        if ((opcode == LOAD) && ((DE_EX_instr.rd_addr == IR[19:15])  || (DE_EX_instr.rd_addr == IR[24:20]))) ld_haz = 1;
     end
     
     // Creates a RISC-V register file
@@ -170,15 +170,18 @@ module OTTER_MCU(input CLK,
     assign opcode = opcode_t'(IR[6:0]);
     assign rs1_used = ((opcode != LUI) && // only LUI, AUIPC, and JAL instruction don't use rs1
                        (opcode != AUIPC) &&
+                       (opcode != NOP) &&
                        (opcode != JAL)) ? 1 : 0;
     assign rs2_used = ((opcode == BRANCH) || // only BRANCH, STORE, and OP instruction use rs2
                        (opcode == STORE) ||
                        (opcode == OP)) ? 1 : 0;
     assign rd_used = ((opcode != BRANCH) && // only BRANCH and STORE instructions don't use an rd
+                      (opcode != NOP) &&
                       (opcode != STORE)) ? 1 : 0;  
     assign memWrite = (opcode == STORE) ? 1 : 0; // only enable mem write on a store instruction
-    assign memRead2 = (opcode == LOAD) ? 1 : 0; // only enable read from mem on a load instruction
+    assign memRead2 = ((opcode == LOAD)) ? 1 : 0; // only enable read from mem on a load instruction
     assign regWrite = ((opcode != BRANCH) && // no rd for BRANCH or STORE instructions
+                       (opcode != NOP) &&
                        (opcode != STORE)) ? 1 : 0;                                                           
     // Generate immediates
     assign S_immed = {{20{IR[31]}},IR[31:25],IR[11:7]};
@@ -379,7 +382,7 @@ module OTTER_MCU(input CLK,
     // Sets up memory for the fetch stage and for memory accessing in Memory stage
     // In the future need to check on IO and Programmer stuff
     OTTER_mem_byte #(14) memory  (.MEM_CLK(CLK),.MEM_ADDR1(pc_out),.MEM_ADDR2(MEM_aluResult),.MEM_DIN2(MEM_DIN2),
-                               .MEM_WRITE2(EX_MEM_instr.memWrite),.MEM_READ1(memRead1),.MEM_READ2(EX_MEM_instr.memRead2),
+                               .MEM_WRITE2(EX_MEM_instr.memWrite),.MEM_READ1(memRead1),.MEM_READ2(EX_MEM_instr.memRead2), .LD_HAZ(ld_haz),
                                .ERR(),.MEM_DOUT1(IR),.MEM_DOUT2(mem_data),.IO_IN(IOBUS_IN),.IO_WR(IOBUS_WR),.MEM_SIZE(EX_MEM_instr.mem_type[1:0]),.MEM_SIGN(mem_sign_after));
     
 //======================= END MEMORY STAGE ===========================//

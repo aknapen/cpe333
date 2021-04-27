@@ -251,7 +251,7 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
  endmodule
 */
  // NEW MEMORY MODULE                                                                                                                               //func3
- module OTTER_mem_byte(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_READ1,MEM_READ2,ERR,MEM_DOUT1,MEM_DOUT2,IO_IN,IO_WR,MEM_SIZE,MEM_SIGN);
+ module OTTER_mem_byte(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_READ1,MEM_READ2,ERR,MEM_DOUT1,MEM_DOUT2,LD_HAZ,IO_IN,IO_WR,MEM_SIZE,MEM_SIGN);
     parameter ACTUAL_WIDTH=14;  //32KB     16K x 32
     parameter NUM_COL = 4;
     parameter COL_WIDTH = 8;
@@ -263,6 +263,7 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
     input MEM_WRITE2;
     input MEM_READ1;
     input MEM_READ2;
+    input LD_HAZ;
     //input [1:0] MEM_BYTE_EN1;
     //input [1:0] MEM_BYTE_EN2;
     input [31:0] IO_IN;
@@ -327,8 +328,13 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
             memOut2 <= memory[memAddr2]; 
         //PORT 1  //Instructions
         if(MEM_READ1)
-            MEM_DOUT1 <= memory[memAddr1];  
-            
+        begin
+            case (LD_HAZ)
+                0: MEM_DOUT1 <= memory[memAddr1];  
+                1: MEM_DOUT1 <= 32'b0;
+            endcase
+        end
+        
         saved_mem_size <= MEM_SIZE;
         saved_mem_sign <= MEM_SIGN;
         saved_mem_addr2 <=MEM_ADDR2;
