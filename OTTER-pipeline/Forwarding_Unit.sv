@@ -1,6 +1,7 @@
 module Forwarding_Unit (
   input logic [4:0] RS1, RS2, EX_MEM_RD, MEM_WB_RD, // input register addresses
   input RS1_USED, RS2_USED, EX_MEM_REGWRITE, MEM_WB_REGWRITE, LD_HAZ,
+  input [7:0] OP,
   output logic [1:0] SEL_A, SEL_B // output select bits for ALU MUXes
   );
     
@@ -25,8 +26,8 @@ module Forwarding_Unit (
   begin
     SEL_B = 0;
     if (LD_HAZ && (MEM_WB_RD == RS2)&& (RS2_USED)) SEL_B = LOAD_HAZ;
-    if (EX_MEM_REGWRITE && (EX_MEM_RD != 0) && (EX_MEM_RD == RS2) && (RS2_USED)) SEL_B = MEM_HAZ; // take most recent hazard
-    else if (MEM_WB_REGWRITE && (MEM_WB_RD != 0) && (MEM_WB_RD == RS2) && (RS2_USED)) SEL_B = WB_HAZ;
+    if ((OP != 7'b0100011) && EX_MEM_REGWRITE && (EX_MEM_RD != 0) && (EX_MEM_RD == RS2) && (RS2_USED)) SEL_B = MEM_HAZ; // take most recent hazard
+    else if ((OP != 7'b0100011) && MEM_WB_REGWRITE && (MEM_WB_RD != 0) && (MEM_WB_RD == RS2) && (RS2_USED)) SEL_B = WB_HAZ;
     
   end
 endmodule //

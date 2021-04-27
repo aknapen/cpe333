@@ -313,7 +313,7 @@ module OTTER_MCU(input CLK,
     Forwarding_Unit FU(.RS1(DE_EX_instr.rs1_addr), .RS1_USED(DE_EX_instr.rs1_used), .RS2(DE_EX_instr.rs2_addr), 
                        .RS2_USED(DE_EX_instr.rs2_used), .EX_MEM_RD(EX_MEM_instr.rd_addr), .EX_MEM_REGWRITE(EX_MEM_instr.regWrite),
                        .MEM_WB_RD(MEM_WB_instr.rd_addr), .MEM_WB_REGWRITE(MEM_WB_instr.regWrite), .LD_HAZ(MEM_WB_instr.ld_haz), 
-                       .SEL_A(forward_sel_A), .SEL_B(forward_sel_B));
+                       .OP(DE_EX_instr.opcode), .SEL_A(forward_sel_A), .SEL_B(forward_sel_B));
     
     // Adding two 3-1 MUXes here to handle data hazards
     always_comb
@@ -346,21 +346,30 @@ module OTTER_MCU(input CLK,
 
 //======================= END EXECUTE STAGE ===========================//
     logic [31:0] MEM_aluResult;
-    logic [31:0] MEM_RS2, MEM_I_immed;
-    
+    logic [31:0] MEM_RS2, MEM_DIN2, MEM_I_immed;
+
     always_comb
     begin
         jb_taken = 0;
         jb_taken <= (br_taken || jump_taken) && (~DE_EX_instr.invalid); // Make sure we don't take branches if invalid instruction
     end
     
+    always_comb
+    begin // Handles possible store hazard with MEM_DIN2 data
+        if (DE_EX_instr.opcode == STORE)
+            case (DE_EX_instr.rs2_addr)
+                EX_MEM_instr.rd_addr: MEM_RS2 = MEM_aluResult;
+                MEM_WB_instr.rd_addr: MEM_RS2 = WB_aluResult;
+                default: MEM_RS2 = EX_RS2;
+            endcase
+    end
     
     always_ff @(posedge CLK) // to push intsr_t through the pipeline stages
     begin
         EX_MEM_instr <= DE_EX_instr;
         EX_MEM_instr.br_taken <= jb_taken;
         MEM_aluResult <= aluResult;   
-        MEM_RS2 <= EX_RS2; // Need this for din2 into memory
+        MEM_DIN2 <= MEM_RS2; // Need this for din2 into memory
         MEM_I_immed <= EX_I_immed; // Need this for CSR
     end
     
@@ -369,7 +378,7 @@ module OTTER_MCU(input CLK,
     
     // Sets up memory for the fetch stage and for memory accessing in Memory stage
     // In the future need to check on IO and Programmer stuff
-    OTTER_mem_byte #(14) memory  (.MEM_CLK(CLK),.MEM_ADDR1(pc_out),.MEM_ADDR2(MEM_aluResult),.MEM_DIN2(MEM_RS2),
+    OTTER_mem_byte #(14) memory  (.MEM_CLK(CLK),.MEM_ADDR1(pc_out),.MEM_ADDR2(MEM_aluResult),.MEM_DIN2(MEM_DIN2),
                                .MEM_WRITE2(EX_MEM_instr.memWrite),.MEM_READ1(memRead1),.MEM_READ2(EX_MEM_instr.memRead2),
                                .ERR(),.MEM_DOUT1(IR),.MEM_DOUT2(mem_data),.IO_IN(IOBUS_IN),.IO_WR(IOBUS_WR),.MEM_SIZE(EX_MEM_instr.mem_type[1:0]),.MEM_SIGN(mem_sign_after));
     
