@@ -165,13 +165,8 @@ module OTTER_MCU(input CLK,
     OTTER_CU_Decoder CU_DECODER(.CU_OPCODE(IR[6:0]), .CU_FUNC3(IR[14:12]),.CU_FUNC7(IR[31:25]), 
              .CU_ALU_SRCA(opA_sel), .CU_ALU_SRCB(opB_sel),.CU_ALU_FUN(alu_fun),.CU_RF_WR_SEL(wb_sel),
              .intTaken(intTaken));    
-             
-    // Take care of logic need to assign values pushed through pipeline in the struct
-    always_comb
-    begin
-        opcode = ld_haz ? NOP : opcode_t'(IR[6:0]);
-    end
-     
+    
+    assign opcode = opcode_t'(IR[6:0]); 
     assign rs1_used = ((opcode != LUI) && // only LUI, AUIPC, and JAL instruction don't use rs1
                        (opcode != AUIPC) &&
                        (opcode != NOP) &&
