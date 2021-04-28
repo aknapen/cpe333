@@ -91,8 +91,7 @@ module OTTER_MCU(input CLK,
     instr_t DE_EX_instr;
     instr_t EX_MEM_instr;
     instr_t MEM_WB_instr;
-    instr_t NO_OP = 69'b0;
-    
+        
     logic [31:0] IF_ID_pc;
       
     wire mepcWrite, csrWrite,intCLR, mie, intTaken;
@@ -155,7 +154,8 @@ module OTTER_MCU(input CLK,
     always_comb
     begin
         ld_haz = 0;
-        if ((opcode == LOAD) && ((DE_EX_instr.rd_addr == IR[19:15])  || (DE_EX_instr.rd_addr == IR[24:20]))) ld_haz = 1;
+        if ( !jb_taken && !EX_MEM_instr.br_taken &&
+             (opcode == LOAD) && ((DE_EX_instr.rd_addr == IR[19:15])  || (DE_EX_instr.rd_addr == IR[24:20]))) ld_haz = 1;
     end
     
     // Creates a RISC-V register file
@@ -211,9 +211,9 @@ module OTTER_MCU(input CLK,
     instr_t instr;
     always_comb
     begin
-        case (ld_haz)
-            0: 
-            begin
+//        case (ld_haz)
+//            0: 
+//            begin
                 instr.opcode <= opcode;
     //            instr.invalid <= EX_MEM_instr.br_taken || MEM_WB_instr.br_taken; // Instruction invalid if either of prev2 instructions took a branch
                 instr.invalid = (jb_taken) || (EX_MEM_instr.br_taken); // Instruction invalid if either of prev2 instructions took a branch
@@ -232,10 +232,10 @@ module OTTER_MCU(input CLK,
                 instr.ld_haz <= ld_haz;
                 instr.pc <= IF_ID_pc; // get pc value from fetch stage
                 instr.br_taken <= 0;   
-            end
+//            end
             
-            1: instr = 72'b0;
-        endcase
+//            1: instr = 72'b0;
+//        endcase
     end
 
     always_ff @(posedge CLK)
