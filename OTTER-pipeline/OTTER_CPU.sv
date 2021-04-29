@@ -211,31 +211,23 @@ module OTTER_MCU(input CLK,
     instr_t instr;
     always_comb
     begin
-//        case (ld_haz)
-//            0: 
-//            begin
-                instr.opcode <= opcode;
-    //            instr.invalid <= EX_MEM_instr.br_taken || MEM_WB_instr.br_taken; // Instruction invalid if either of prev2 instructions took a branch
-                instr.invalid = (jb_taken) || (EX_MEM_instr.br_taken); // Instruction invalid if either of prev2 instructions took a branch
-                instr.rs1_addr <= IR[19:15];
-                instr.rs2_addr <= IR[24:20];
-                instr.rd_addr <= IR[11:7];
-                instr.rs1_used <= rs1_used;
-                instr.rs2_used <= rs2_used;
-                instr.rd_used <= rd_used;
-                instr.alu_fun <= alu_fun;
-                instr.memWrite = (memWrite) && (~instr.invalid); // If instruction is invalid don't write to mem
-                instr.memRead2 <= memRead2;
-                instr.regWrite = (regWrite) && (~instr.invalid);  // If instruction is invalid don't write to reg
-                instr.rf_wr_sel <= wb_sel;
-                instr.mem_type <= IR[14:12]; // holds size and sign for memory module (funct3 in instruction)
-                instr.ld_haz <= ld_haz;
-                instr.pc <= IF_ID_pc; // get pc value from fetch stage
-                instr.br_taken <= 0;   
-//            end
-            
-//            1: instr = 72'b0;
-//        endcase
+        instr.opcode = opcode;
+        instr.invalid = (jb_taken) || (EX_MEM_instr.br_taken); // Instruction invalid if either of prev2 instructions took a branch
+        instr.rs1_addr = IR[19:15];
+        instr.rs2_addr = IR[24:20];
+        instr.rd_addr = IR[11:7];
+        instr.rs1_used = rs1_used;
+        instr.rs2_used = rs2_used;
+        instr.rd_used = rd_used;
+        instr.alu_fun = alu_fun;
+        instr.memWrite = (memWrite) && (~instr.invalid); // If instruction is invalid don't write to mem
+        instr.memRead2 = memRead2;
+        instr.regWrite = (regWrite) && (~instr.invalid);  // If instruction is invalid don't write to reg
+        instr.rf_wr_sel = wb_sel;
+        instr.mem_type = IR[14:12]; // holds size and sign for memory module (funct3 in instruction)
+        instr.ld_haz = ld_haz;
+        instr.pc = IF_ID_pc; // get pc value from fetch stage
+        instr.br_taken = 0;   
     end
 
     always_ff @(posedge CLK)
@@ -357,6 +349,7 @@ module OTTER_MCU(input CLK,
     
     always_comb
     begin // Handles possible store hazard with MEM_DIN2 data
+        MEM_RS2 = EX_RS2;
         if (DE_EX_instr.opcode == STORE)
             case (DE_EX_instr.rs2_addr)
                 EX_MEM_instr.rd_addr: MEM_RS2 = MEM_aluResult;
