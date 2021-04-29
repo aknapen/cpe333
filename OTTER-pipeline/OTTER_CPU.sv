@@ -93,7 +93,15 @@ module OTTER_MCU(input CLK,
     instr_t MEM_WB_instr;
         
     logic [31:0] IF_ID_pc;
-      
+    logic [31:0] WB_rfIn; 
+    logic ld_haz; // used to detect a load-use hazard
+    logic jb_taken;
+    
+    logic [31:0] MEM_aluResult; // holds the ALU result value inside the memory stage
+    logic [31:0] WB_aluResult; // holds the ALU result value inside the writeback stage
+    
+    logic [31:0] mem_data; // MEM_DOUT2 wire
+    
     wire mepcWrite, csrWrite,intCLR, mie, intTaken;
     wire [31:0] mepc, mtvec;
    
@@ -147,7 +155,6 @@ module OTTER_MCU(input CLK,
     
     logic [1:0] wb_sel;
     
-    logic ld_haz; // used to detect a load-use hazard
     opcode_t opcode;
     
     // Load-Use Hazard Detection
@@ -238,7 +245,10 @@ module OTTER_MCU(input CLK,
 //======================= BEGIN EXECUTE STAGE ===========================//
     logic [2:0] func_3; // needed for checking branch conditions
     logic [31:0] aluResult;
-    
+
+    logic [1:0] forward_sel_A, forward_sel_B; // MUX control signals to choose forwarded data
+    logic [31:0] aluA, aluB; 
+      
     //pc target calculations
     assign jalr_pc = EX_I_immed + aluA;
     //assign branch_pc = pc + {{21{IR[31]}},IR[7],IR[30:25],IR[11:8] ,1'b0};   //word aligned addresses
@@ -247,10 +257,9 @@ module OTTER_MCU(input CLK,
     assign int_pc = 0;
     
     logic br_taken,br_lt,br_eq,br_ltu;
-    logic jump_taken, jb_taken;
+    logic jump_taken;
     
-    logic [1:0] forward_sel_A, forward_sel_B; // MUX control signals to choose forwarded data
-    logic [31:0] aluA, aluB;
+    
     
     //Branch Condition Generator
     always_comb
@@ -338,13 +347,12 @@ module OTTER_MCU(input CLK,
     
 
 //======================= END EXECUTE STAGE ===========================//
-    logic [31:0] MEM_aluResult;
+    
     logic [31:0] MEM_RS2, MEM_DIN2, MEM_I_immed;
 
     always_comb
     begin
-        jb_taken = 0;
-        jb_taken <= (br_taken || jump_taken) && (~DE_EX_instr.invalid); // Make sure we don't take branches if invalid instruction
+        jb_taken = (br_taken || jump_taken) && (~DE_EX_instr.invalid); // Make sure we don't take branches if invalid instruction
     end
     
     always_comb
@@ -368,7 +376,7 @@ module OTTER_MCU(input CLK,
     end
     
 //======================= BEGIN MEMORY STAGE ===========================//
-    logic [31:0] mem_data;
+    
     
     // Sets up memory for the fetch stage and for memory accessing in Memory stage
     // In the future need to check on IO and Programmer stuff
@@ -378,7 +386,7 @@ module OTTER_MCU(input CLK,
     
 //======================= END MEMORY STAGE ===========================//
 
-    logic [31:0] WB_aluResult, WB_I_immed;
+    logic [31:0] WB_I_immed;
     
     always_ff @(posedge CLK) // to push intsr_t through the pipeline stages and result of the memory
     begin
@@ -388,13 +396,8 @@ module OTTER_MCU(input CLK,
     end
                                
 //======================= BEGIN WRITEBACK STAGE ===========================//
-
-    logic [31:0] csr_reg;
     
     // Technically, the writeback stage uses the register file since it writes back to the registers 
-   
-    CSR CSRs(.clk(CLK),.rst(RESET),.intTaken(intTaken),.addr(WB_I_immed),.next_pc(MEM_WB_instr.pc),.wd(WB_aluResult),.wr_en(csrWrite),
-           .rd(csr_reg),.mepc(mepc),.mtvec(mtvec),.mie(mie));  
     
     //Creates 4-to-1 multiplexor used to select reg write back data
     // Mult4 to 1 ( PC+4, CSR reg, dout2 from mem, alu result, sel = wb_sel from decoder, out = finished register in
@@ -402,14 +405,14 @@ module OTTER_MCU(input CLK,
     // WB_rfIn is connected to the reg file 
     logic [31:0] MEM_PC;
     assign MEM_PC = MEM_WB_instr.pc + 4;
-    logic [31:0] WB_rfIn; 
-    Mult4to1 regWriteback (MEM_PC,csr_reg, mem_data, WB_aluResult, MEM_WB_instr.rf_wr_sel, WB_rfIn);
+    
+    Mult4to1 regWriteback (MEM_PC,0, mem_data, WB_aluResult, MEM_WB_instr.rf_wr_sel, WB_rfIn);
     
 
     // ************************ BEGIN PROGRAMMER ************************ 
 
     assign mem_addr_after = s_prog_ram_we ? s_prog_ram_addr : MEM_aluResult;  // 2:1 mux
-    assign mem_data_after = s_prog_ram_we ? s_prog_ram_data : MEM_RS2;  // 2:1 mux
+    assign mem_data_after = s_prog_ram_we ? s_prog_ram_data : MEM_DIN2;  // 2:1 mux
     assign mem_size_after = s_prog_ram_we ? 2'b10 : EX_MEM_instr.mem_type[1:0];  // 2:1 mux
     assign mem_sign_after = s_prog_ram_we ? 1'b0 : EX_MEM_instr.mem_type[2];  // 2:1 mux
     assign mem_we_after = s_prog_ram_we | EX_MEM_instr.memWrite;  // or gate
