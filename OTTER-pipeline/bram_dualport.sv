@@ -328,12 +328,13 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
             memOut2 <= memory[memAddr2]; 
         //PORT 1  //Instructions
         if(MEM_READ1)
-        begin
-            case (LD_HAZ)
-                0: MEM_DOUT1 <= memory[memAddr1];  
-                1: MEM_DOUT1 <= 32'b0;
-            endcase
-        end
+            MEM_DOUT1 <= memory[memAddr1];
+//        begin
+//            case (LD_HAZ)
+//                0: MEM_DOUT1 <= memory[memAddr1];  
+//                1: MEM_DOUT1 <= 32'b0;
+//            endcase
+//        end
         
         saved_mem_size <= MEM_SIZE;
         saved_mem_sign <= MEM_SIGN;

@@ -92,10 +92,10 @@ module OTTER_MCU(input CLK,
     instr_t EX_MEM_instr;
     instr_t MEM_WB_instr;
         
-    logic [31:0] IF_ID_pc;
-    logic [31:0] WB_rfIn; 
+    logic [31:0] IF_ID_pc; // transmits the PC between the IF and ID stages
+    logic [31:0] WB_rfIn; // connect to din for the reg file
     logic ld_haz; // used to detect a load-use hazard
-    logic jb_taken;
+    logic jb_taken; // indicates if a jump or branch has been taken
     
     logic [31:0] MEM_aluResult; // holds the ALU result value inside the memory stage
     logic [31:0] WB_aluResult; // holds the ALU result value inside the writeback stage
@@ -116,13 +116,21 @@ module OTTER_MCU(input CLK,
     Mult6to1 PCdatasrc (next_pc, jalr_pc, branch_pc, jump_pc, mtvec, mepc, pc_source, pc_in);
        
     assign pcWrite = ~ld_haz; // only allow new PC through if we're not stalling
-     
+
     //PC is byte-addressed but our memory is word addressed 
     ProgCount PC (.PC_CLK(CLK), .PC_RST(RESET), .PC_LD(pcWrite),
-                  .PC_DIN(pc_in), .PC_COUNT(pc_out));   
-                 
-    assign next_pc = pc_out + 4;    //PC is byte aligned, memory is word aligned (NEED TO CALC next_pc HERE SO IT'S READY BY NEXT INSTRUCTION                          
-    assign memRead1 = 1; // can hardcode this to 1 since we always want to read an instr in the fetch stage
+                  .PC_DIN(pc_in), .PC_COUNT(pc_out));  
+                   
+    // Need to re-fetch decode instruction on a load-use hazard
+    always_comb
+    begin
+        if (~ld_haz)              
+            next_pc = pc_out + 4;    //PC is byte aligned, memory is word aligned (NEED TO CALC next_pc HERE SO IT'S READY BY NEXT INSTRUCTION 
+        else
+            next_pc = pc_out;                         
+    end    
+    
+    assign memRead1 = ~ld_haz; // can hardcode this to 1 since we always want to read an instr in the fetch stage
    
     //=======================  END FETCH STAGE ===========================//
     
@@ -131,7 +139,7 @@ module OTTER_MCU(input CLK,
     always_comb
     begin
         fetch_pc = pc_out;
-        if (ld_haz) fetch_pc = 32'b0;
+        if (ld_haz) fetch_pc = pc_out-4;
     end
     
     // PC REGISTER
@@ -148,21 +156,24 @@ module OTTER_MCU(input CLK,
     logic opA_sel;// select bits for registers A and B MUXes
     logic [1:0] opB_sel; 
     
-    logic [3:0] alu_fun;
-    logic [31:0] rs1, rs2, I_immed,S_immed,U_immed,aluBin,aluAin;
+    logic [3:0] alu_fun; // specifies what operation the ALU will execute
+    logic [31:0] rs1, rs2, I_immed,S_immed,U_immed,aluBin,aluAin; // functional signals for the decode stage
     
     logic rs1_used, rs2_used, rd_used, memWrite, memRead2, regWrite;  // for calculating struct fields
     
-    logic [1:0] wb_sel;
+    logic [1:0] wb_sel; // select bit for the writeback mux to the reg file
     
-    opcode_t opcode;
-    
+    opcode_t opcode; // specifies the opcode of the instruciton in the decode stage
+        
     // Load-Use Hazard Detection
     always_comb
     begin
         ld_haz = 0;
-        if ( !jb_taken && !EX_MEM_instr.br_taken &&
-             (opcode == LOAD) && ((DE_EX_instr.rd_addr == IR[19:15])  || (DE_EX_instr.rd_addr == IR[24:20]))) ld_haz = 1;
+        if (!jb_taken && !DE_EX_instr.br_taken && !DE_EX_instr.invalid &&
+            (DE_EX_instr.opcode == LOAD) && ((DE_EX_instr.rd_addr == IR[19:15]) || (DE_EX_instr.rd_addr == IR[24:20]))) 
+        begin
+            ld_haz = 1;
+        end
     end
     
     // Creates a RISC-V register file
@@ -173,6 +184,7 @@ module OTTER_MCU(input CLK,
              .CU_ALU_SRCA(opA_sel), .CU_ALU_SRCB(opB_sel),.CU_ALU_FUN(alu_fun),.CU_RF_WR_SEL(wb_sel),
              .intTaken(intTaken));    
     
+    // Assign all control signals to be pushed through the pipeline
     assign opcode = opcode_t'(IR[6:0]); 
     assign rs1_used = ((opcode != LUI) && // only LUI, AUIPC, and JAL instruction don't use rs1
                        (opcode != AUIPC) &&
@@ -188,7 +200,8 @@ module OTTER_MCU(input CLK,
     assign memRead2 = ((opcode == LOAD)) ? 1 : 0; // only enable read from mem on a load instruction
     assign regWrite = ((opcode != BRANCH) && // no rd for BRANCH or STORE instructions
                        (opcode != NOP) &&
-                       (opcode != STORE)) ? 1 : 0;                                                           
+                       (opcode != STORE)) ? 1 : 0;       
+                                                                           
     // Generate immediates
     assign S_immed = {{20{IR[31]}},IR[31:25],IR[11:7]};
     assign I_immed = {{20{IR[31]}},IR[31:20]};
@@ -196,18 +209,18 @@ module OTTER_MCU(input CLK,
     
     // Creates a 2-to-1 multiplexor used to select the A input of the ALU 
     Mult2to1 ALUAinput (rs1, U_immed, opA_sel, aluAin);
-    assign DE_A = aluAin;
+    assign DE_A = aluAin; // ALU input A to transfer to the execute stage
     
     // Creates a 4-to-1 multiplexor used to select the B input of the ALU
     Mult4to1 ALUBinput (rs2, I_immed, S_immed, IF_ID_pc, opB_sel, aluBin);
-    assign DE_B = aluBin;
+    assign DE_B = aluBin; // ALU input B to transfer to the execute stage
 
 //======================= END DECODE STAGE ===========================//
 
     logic [31:0] EX_A, EX_B, EX_IR, EX_RS2, EX_I_immed;
 
     always_ff @(posedge CLK) // to push ALU inputs and instruction from Decode to Execute stage
-    begin // DO THESE NEED TO BE ZEROED OUT ON LOAD-USE HAZARD??? Don't think so b/c all control signals in instr_t should be 0
+    begin
         EX_A <= DE_A;
         EX_B <= DE_B;
         EX_IR <= IR;
@@ -218,36 +231,40 @@ module OTTER_MCU(input CLK,
     instr_t instr;
     always_comb
     begin
-        instr.opcode = opcode;
-        instr.invalid = (jb_taken) || (EX_MEM_instr.br_taken); // Instruction invalid if either of prev2 instructions took a branch
-        instr.rs1_addr = IR[19:15];
-        instr.rs2_addr = IR[24:20];
-        instr.rd_addr = IR[11:7];
-        instr.rs1_used = rs1_used;
-        instr.rs2_used = rs2_used;
-        instr.rd_used = rd_used;
-        instr.alu_fun = alu_fun;
-        instr.memWrite = (memWrite) && (~instr.invalid); // If instruction is invalid don't write to mem
-        instr.memRead2 = memRead2;
-        instr.regWrite = (regWrite) && (~instr.invalid);  // If instruction is invalid don't write to reg
-        instr.rf_wr_sel = wb_sel;
-        instr.mem_type = IR[14:12]; // holds size and sign for memory module (funct3 in instruction)
-        instr.ld_haz = ld_haz;
-        instr.pc = IF_ID_pc; // get pc value from fetch stage
-        instr.br_taken = 0;   
+        instr = 72'b0;
+        if (~ld_haz) // Need to prevent passing instruction from decode to execute on a load-use hazard
+        begin // otherwise, assign decode control signals to be pushed to execute stage
+            instr.opcode = opcode;
+            instr.invalid = (jb_taken) || (EX_MEM_instr.br_taken); // Instruction invalid if either of prev2 instructions took a branch
+            instr.rs1_addr = IR[19:15];
+            instr.rs2_addr = IR[24:20];
+            instr.rd_addr = IR[11:7];
+            instr.rs1_used = rs1_used;
+            instr.rs2_used = rs2_used;
+            instr.rd_used = rd_used;
+            instr.alu_fun = alu_fun;
+            instr.memWrite = (memWrite) && (~instr.invalid); // If instruction is invalid don't write to mem
+            instr.memRead2 = memRead2;
+            instr.regWrite = (regWrite) && (~instr.invalid);  // If instruction is invalid don't write to reg
+            instr.rf_wr_sel = wb_sel;
+            instr.mem_type = IR[14:12]; // holds size and sign for memory module (funct3 in instruction)
+            instr.ld_haz = ld_haz;
+            instr.pc = IF_ID_pc; // get pc value from fetch stage
+            instr.br_taken = 0;   
+        end
     end
 
     always_ff @(posedge CLK)
     begin
-        DE_EX_instr <= instr;
+        DE_EX_instr <= instr; // push instruction from decode to execute stage
     end
       
 //======================= BEGIN EXECUTE STAGE ===========================//
     logic [2:0] func_3; // needed for checking branch conditions
-    logic [31:0] aluResult;
+    logic [31:0] aluResult; // holds result of ALU operation
 
     logic [1:0] forward_sel_A, forward_sel_B; // MUX control signals to choose forwarded data
-    logic [31:0] aluA, aluB; 
+    logic [31:0] aluA, aluB; // true inputs to the ALU module
       
     //pc target calculations
     assign jalr_pc = EX_I_immed + aluA;
@@ -256,7 +273,7 @@ module OTTER_MCU(input CLK,
     assign jump_pc = DE_EX_instr.pc + {{12{EX_IR[31]}}, EX_IR[19:12], EX_IR[20],EX_IR[30:21],1'b0};
     assign int_pc = 0;
     
-    logic br_taken,br_lt,br_eq,br_ltu;
+    logic br_taken,br_lt,br_eq,br_ltu; // contorl signals to handle jumps and branches
     logic jump_taken;
     
     
@@ -288,13 +305,12 @@ module OTTER_MCU(input CLK,
             BRANCH: br_taken = br_taken;    // Make sure only Branches put up branch taken flag
             default: br_taken = 0;
         endcase
-//        EX_MEM_instr.br_taken <= br_taken;             // Used to identify branches
     end
     
     always_comb // PC_Source generation
     begin
         jump_taken = 0;
-        case (DE_EX_instr.opcode)
+        case (DE_EX_instr.opcode) // use the opcode to determine which pc value to use
             JALR:   begin
                         pc_source = 3'b001;
                         jump_taken = 1;
@@ -317,7 +333,7 @@ module OTTER_MCU(input CLK,
                        .MEM_WB_RD(MEM_WB_instr.rd_addr), .MEM_WB_REGWRITE(MEM_WB_instr.regWrite), .LD_HAZ(MEM_WB_instr.ld_haz), 
                        .OP(DE_EX_instr.opcode), .SEL_A(forward_sel_A), .SEL_B(forward_sel_B));
     
-    // Adding two 3-1 MUXes here to handle data hazards
+    // Adding two 3-1 MUXes here to handle data hazard forwarding
     always_comb
     begin
         case (forward_sel_A)
@@ -349,7 +365,8 @@ module OTTER_MCU(input CLK,
 //======================= END EXECUTE STAGE ===========================//
     
     logic [31:0] MEM_RS2, MEM_DIN2, MEM_I_immed;
-
+    instr_t toMem; // intermediary instruction struct
+    
     always_comb
     begin
         jb_taken = (br_taken || jump_taken) && (~DE_EX_instr.invalid); // Make sure we don't take branches if invalid instruction
@@ -366,9 +383,15 @@ module OTTER_MCU(input CLK,
             endcase
     end
     
+    always_comb // logic to signal whether an instruction was the "source" of a load-use hazard
+    begin
+        toMem = DE_EX_instr;
+        if (ld_haz) toMem.ld_haz = 1;
+    end
+        
     always_ff @(posedge CLK) // to push intsr_t through the pipeline stages
     begin
-        EX_MEM_instr <= DE_EX_instr;
+        EX_MEM_instr <= toMem;
         EX_MEM_instr.br_taken <= jb_taken;
         MEM_aluResult <= aluResult;   
         MEM_DIN2 <= MEM_RS2; // Need this for din2 into memory

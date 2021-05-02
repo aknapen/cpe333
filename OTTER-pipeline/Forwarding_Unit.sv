@@ -12,22 +12,27 @@ module Forwarding_Unit (
     LOAD_HAZ // 2b'11
   } hazard_t;
   
+  hazard_t selA, selB; // for readability in sim
+  
   // Hazard detection for ALU input A
   always_comb
   begin
-    SEL_A = 0;
-    if (LD_HAZ && (MEM_WB_RD == RS1)&& (RS1_USED)) SEL_A = LOAD_HAZ;
-    else if (EX_MEM_REGWRITE && (EX_MEM_RD != 0) && (EX_MEM_RD == RS1)&& (RS1_USED)) SEL_A = MEM_HAZ; // take most recent hazard
-    else if (MEM_WB_REGWRITE && (MEM_WB_RD != 0) && (MEM_WB_RD == RS1)&& (RS1_USED)) SEL_A = WB_HAZ; 
+    selA = NO_HAZ;
+    if (LD_HAZ && (MEM_WB_RD == RS1)&& (RS1_USED)) selA = LOAD_HAZ;
+    else if (EX_MEM_REGWRITE && (EX_MEM_RD != 0) && (EX_MEM_RD == RS1)&& (RS1_USED)) selA = MEM_HAZ; // take most recent hazard
+    else if (MEM_WB_REGWRITE && (MEM_WB_RD != 0) && (MEM_WB_RD == RS1)&& (RS1_USED)) selA = WB_HAZ; 
   end
   
   // Hazard detection for ALU input B
   always_comb
   begin
-    SEL_B = 0;
-    if (LD_HAZ && (MEM_WB_RD == RS2)&& (RS2_USED)) SEL_B = LOAD_HAZ;
-    if ((OP != 7'b0100011) && EX_MEM_REGWRITE && (EX_MEM_RD != 0) && (EX_MEM_RD == RS2) && (RS2_USED)) SEL_B = MEM_HAZ; // take most recent hazard
-    else if ((OP != 7'b0100011) && MEM_WB_REGWRITE && (MEM_WB_RD != 0) && (MEM_WB_RD == RS2) && (RS2_USED)) SEL_B = WB_HAZ;
+    selB = NO_HAZ;
+    if (LD_HAZ && (MEM_WB_RD == RS2) && (RS2_USED)) selB = LOAD_HAZ;
+    else if ((OP != 7'b0100011) && EX_MEM_REGWRITE && (EX_MEM_RD != 0) && (EX_MEM_RD == RS2) && (RS2_USED)) selB = MEM_HAZ; // take most recent hazard
+    else if ((OP != 7'b0100011) && MEM_WB_REGWRITE && (MEM_WB_RD != 0) && (MEM_WB_RD == RS2) && (RS2_USED)) selB = WB_HAZ;
     
   end
+  
+  assign SEL_A = selA;
+  assign SEL_B = selB;
 endmodule //
