@@ -113,7 +113,34 @@ module L1_cache_tag (
     input cache_tag_type tag_write,
     output cache_tag_type tag_read);
     
-	// tag storage 
+   cache_tag_type tags [1023:0];
+   
+   initial begin
+        for(int i=0; i<1023; i++)
+            tags[i]='0;
+    end
+    
+    always_comb // Asynchronous read
+    begin   
+        tag_read = tags[tag_req.index];
+    end
+    
+    always_ff @(posedge clk) // Synchronous write
+    begin
+        if(tag_req.we)
+        begin
+            tags[tag_req.index].tag <= tag_write.tag;
+            tags[tag_req.index].valid <= 1;
+            tags[tag_req.index].dirty <= tag_write.dirty;
+        end
+        
+    end
+    
+    
+	// tag storage  
+	
+	// If tag_reg.we then tags[tag_req.index] <= tag_write
+	// tag_read = tags[tag_req.index]
 	// incluces valid and dirty bits
 	// async read, sync write
 	
@@ -155,7 +182,36 @@ module dcache(
     
 	
 	//FSM for Cache Controller
-
+    
+    always_ff @(posedge clk) begin
+        state <= next_state;
+    end
+    
+    always_comb 
+    begin
+        case(state)
+            idle:
+            begin
+            
+            end
+            compare_tag:
+            begin
+            
+            end
+            
+            allocate:
+            begin
+            
+            end
+            
+            writeback:
+            begin
+            
+            end
+                    
+        endcase
+    end
+    
 	
 	
 	
