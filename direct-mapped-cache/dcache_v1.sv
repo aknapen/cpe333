@@ -153,10 +153,14 @@ module dcache(
     i_mhub_to_dcache.device mhub,
     i_dcache_to_ram.controller ram
     );
-
+    
+    // Inputs to the cache
+    // Will use mhub and ram output signals
     cpu_req_type cpu_req;     //CPU->cache
     mem_data_type mem_data;   //memory->cache
     
+    // Outputs from the cache
+    // Will set mhub and ram input signals
     mem_req_type mem_req;    //cache->memory
     cpu_result_type cpu_res;  //cache->CPU
     
@@ -170,15 +174,40 @@ module dcache(
    
     cache_state_type state, next_state;
 
-    cache_tag_type tag_read;
-    cache_tag_type tag_write;
-    cache_req_type tag_req;
+    cache_tag_type tag_read; // tag to be read from the cache tag module
+    cache_tag_type tag_write; // for writing a tag to the cache tag module
+    cache_req_type tag_req; // request info for reading from or writing to the cache tag module
     
-    cache_data_type data_read;
-    cache_data_type data_write;
-    cache_req_type data_req;
+    cache_data_type data_read; // data to be read form the cache data module
+    cache_data_type data_write; // data to be written to the cache data module
+    cache_req_type data_req; // request info for reading from or writing to the cache data module
     
     cpu_result_type next_cpu_res;
+    
+    // Get the necessary data from the mhub (mhub => cpu_req)
+    assign cpu_req.addr = (mhub.write_addr_valid) ? mhub.write_addr : mhub.read_addr; // MUX for whether mhub is writing to or reading from cache
+    assign cpu_req.data = mhub.write_data; // Take whatever write data the mhub has and check if it's valid later
+    assign cpu_req.rw = (mhub.write_addr_valid) ? 1 : 0; // 1 if a write, 0 if a read
+    assign cpu_req.valid = mhub.read_addr_valid || mhub.write_addr_valid; // don't know how to set this
+	   
+    // Send the necessary data to the mhub (cpu_res => mhub)
+    assign mhub.read_addr_ready = cpu_res.ready;
+    assign mhub.read_data = cpu_res.data;
+    assign mhub.read_data_valid = 0; // don't know how to set this
+    assign mhub.write_addr_ready = cpu_res.ready;
+    assign mhub.write_resp_valid = 0; // don't know how to set this
+    
+    // Send the necessary data to the RAM (mem_req => ram)
+    assign ram.read_addr = mem_req.addr;
+    assign ram.read_addr_valid =  mem_req.valid && !mem_req.rw;
+    assign ram.write_addr = mem_req.addr;
+    assign ram.write_addr_valid = mem_req.valid && mem_req.rw; 
+    assign ram.write_data = mem_req.data;
+    
+    // Get the necessary data from the RAM (ram => mem_data)
+    assign mem_data.data = ram.read_data;
+    assign mem_data.ready = (ram.read_addr_ready || ram.write_addr_ready);
+    
     
 	
 	//FSM for Cache Controller
