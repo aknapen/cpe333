@@ -283,10 +283,29 @@ module dcache(
             
             allocate:
             begin
+                ram.write_addr_valid = 0;
+                mhub.read_addr_ready = 0;
+                mhub.write_addr_ready = 0;
+                mhub.read_data_valid = 0;
+                ram.read_addr = cpu_req.addr;
                 
                 // Next Stage calculation
-                if (!cpu_res.ready || !mem_data.ready) next_state = allocate; // stay in allocate if response or memory isn't ready
-                else if (cpu_res_ready && mem_data.ready) next_state = compare_tag; // return to compare_tag when both response and memory are ready
+                if (!cpu_res.ready || !mem_data.ready) 
+                begin
+                    ram.read_addr_valid = 1;
+                    next_state = allocate; // stay in allocate if response or memory isn't ready
+                end
+               
+                else if (cpu_res_ready && mem_data.ready) 
+                begin
+                    ram.read_addr_valid = 0; // disable reading from RAM while saving into the cache
+                    from_ram = 1;
+                    tag_write.tag = mhub.addr[TAG_MSB:TAB_LSB];
+                    tag_write.valid = 1;
+                    tag_write.dirty = 0;
+                    next_state = compare_tag; // return to compare_tag when both response and memory are ready
+                end
+                
                 else next_state = allocate; // default stay in allocate state
             end
             
