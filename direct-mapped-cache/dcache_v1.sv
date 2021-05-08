@@ -114,10 +114,10 @@ module L1_cache_tag (
     input cache_tag_type tag_write,
     output cache_tag_type tag_read);
     
-   cache_tag_type tags [1023:0];
+   cache_tag_type tags [0:255];
    
    initial begin
-        for(int i=0; i<1023; i++)
+        for(int i=0; i<256; i++)
             tags[i]='0;
     end
     
@@ -182,17 +182,18 @@ module dcache(
     mem_req_type mem_req;    //cache->memory
     cpu_result_type cpu_res;  //cache->CPU
     
-    logic [1:0] block_offset;
-    logic [3:0] be;
-    logic from_ram;
-    logic wait_read, next_wait_read;  
-    cache_req_type data_req;
-    cache_data_type data_write;  
+       
 
+    // Inputs/Outputs from the cache tag module
     cache_tag_type tag_read; // tag to be read from the cache tag module
     cache_tag_type tag_write; // for writing a tag to the cache tag module
     cache_req_type tag_req; // request info for reading from or writing to the cache tag module
     
+    // Inputs/Outputs from the cache data module
+    logic [1:0] block_offset; // block_offset tells you which word to read from a block
+    logic [3:0] be; // be tells you which byte to write to in a block
+    logic from_ram; // tells you if the data you are writing to the cache is from the RAM or not
+    logic wait_read, next_wait_read; 
     cache_data_type data_read; // data to be read form the cache data module
     cache_data_type data_write; // data to be written to the cache data module
     cache_req_type data_req; // request info for reading from or writing to the cache data module
@@ -258,7 +259,7 @@ module dcache(
                 // Next Stage calculation
                 if (mhub.write_addr_valid &&  hit) // successful write
                 begin
-                    
+                    tag_write.dirty = 1;
                     next_state = compare_tag; // stay in compare_tag on a successful read or write to cache
                 end
                 else if (cpu_req.valid && tag_read.dirty && !hit) next_state = writeback; // move to writeback on replacement
@@ -285,15 +286,17 @@ module dcache(
             end       
         endcase
     end
-    
 	
-	
-	
-
+    assign tag_req.index = cpu_req.addr[11:2]; // grab index from address field
+    assign tag_req.we = cpu_req.rw; // only enable write on a write request
+    assign tag_write.tag = cpu_req.addr[TAG_MSB:TAG_LSB]; // acquire the tag from the address field
     L1_cache_tag L1_tags(.*);
-    
-    assign data_req = cpu_req;
-    assign data_write = mhub.write_data;
+
+    assign data_req.index = cpu_req.addr[11:2]; // grab index from address field
+    assign data_req.rw = cpu_req.rw; // only enable write on a write request
+    assign data_write = (from_ram) ? mem_data.data : mhub.write_data;
+    assign be = cpu_req.addr[3:0]; // be is the concatenation of the block and byte offset fields
+    assign block_offset = cpu_req.addr[3:2];
     L1_cache_data L1_data(.*);
 
 endmodule
