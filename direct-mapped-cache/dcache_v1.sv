@@ -151,8 +151,8 @@ endmodule
 
 module dcache(
     input clk, RESET,
-    i_mhub_to_dcache.device mhub,
-    i_dcache_to_ram.controller ram
+    axi_bus_rw.device mhub,
+    axi_bus_rw.controller ram
     );
     
 //            // From RAM
@@ -239,9 +239,9 @@ module dcache(
 	assign write_hit = ((mhub.write_addr[TAG_MSB:TAG_LSB] == tag_read.tag) && mhub.write_addr_valid) && tag_read.valid;
 	assign read_hit = ((mhub.read_addr[TAG_MSB:TAG_LSB] == tag_read.tag) && mhub.read_addr_valid) && tag_read.valid;
 	
-    initial begin // set FSM to Compare Stage initially
-        state = compare_tag;
-    end
+//    initial begin // set FSM to Compare Stage initially
+//        state = compare_tag;
+//    end
     
     always_ff @(posedge clk) begin
         state <= next_state;
@@ -303,7 +303,7 @@ module dcache(
                 begin
                     ram.read_addr_valid = 0; // disable reading from RAM while saving into the cache
                     from_ram = 1;
-                    tag_write.tag = mhub.addr[TAG_MSB:TAB_LSB];
+                    tag_write.tag = (tag_req.we) ? mhub.write_addr[TAG_MSB:TAG_LSB] : mhub.read_addr[TAG_MSB:TAG_LSB];
                     tag_write.valid = 1;
                     tag_write.dirty = 0;
                     next_state = compare_tag; // return to compare_tag when both response and memory are ready
@@ -319,7 +319,7 @@ module dcache(
                 mhub.read_addr_ready = 0; // don't want to read from the RAM in this stage
                 mhub.write_addr_ready = 0; // data has not been written yet
                 mhub.read_data_valid = 0; // not reading data from RAM in this stage
-                ram.write_addr = {write_tag.tag, cpu_req.addr[11:0]};
+                ram.write_addr = {tag_write.tag, cpu_req.addr[11:0]};
                 
                 // Next Stage calculation
                 if (!ram.write_addr_ready) next_state = writeback; // stay in writeback until the memory is ready
@@ -331,7 +331,9 @@ module dcache(
                 end
                 
                 else next_state = writeback; // default stay in writeback
-            end       
+            end
+            
+            default: next_state = compare_tag;       
         endcase
     end
 	
@@ -341,7 +343,7 @@ module dcache(
     L1_cache_tag L1_tags(.*);
 
     assign data_req.index = cpu_req.addr[11:2]; // grab index from address field
-    assign data_req.rw = cpu_req.rw; // only enable write on a write request
+    assign data_req.we = cpu_req.rw; // only enable write on a write request
     assign data_write = (from_ram) ? mem_data.data : mhub.write_data;
     assign be = cpu_req.addr[3:0]; // be is the concatenation of the block and byte offset fields
     assign block_offset = cpu_req.addr[3:2];
