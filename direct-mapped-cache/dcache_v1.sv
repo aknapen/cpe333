@@ -65,8 +65,9 @@ typedef struct {
 
 //memory controller response (memory -> cache controller)
 typedef struct {
-cache_data_type data;
-logic ready;
+    cache_data_type data;
+    logic ready;
+    logic valid;
 }mem_data_type;
 
 endpackage
@@ -154,6 +155,23 @@ module dcache(
     i_dcache_to_ram.controller ram
     );
     
+//            // From RAM
+//	        input read_addr_ready, read_data, read_data_valid,
+//			input  write_addr_ready, write_resp_valid, //write_data_ready,
+//			// TO RAM
+//			output read_addr, read_addr_valid, //read_data_ready,
+//			output write_addr, write_addr_valid, write_data, //write_data_valid,
+//			output size, lu, strobe);
+			
+//            // From Memory Hub
+//			input read_addr, read_addr_valid, //read_data_ready, 
+//			input write_addr, write_addr_valid, write_data, //write_data_valid,
+//			input size, lu, strobe,
+//			// To Memory Hub
+//			output read_addr_ready, read_data, read_data_valid,
+//			output  write_addr_ready, write_resp_valid);       //write_data_ready,
+			
+			
     // Inputs to the cache
     // Will use mhub and ram output signals
     cpu_req_type cpu_req;     //CPU->cache
@@ -167,12 +185,9 @@ module dcache(
     logic [1:0] block_offset;
     logic [3:0] be;
     logic from_ram;
-    logic wait_read, next_wait_read;   
-    
-    
-    typedef enum {idle, compare_tag, allocate, writeback} cache_state_type;
-   
-    cache_state_type state, next_state;
+    logic wait_read, next_wait_read;  
+    cache_req_type data_req;
+    cache_data_type data_write;  
 
     cache_tag_type tag_read; // tag to be read from the cache tag module
     cache_tag_type tag_write; // for writing a tag to the cache tag module
@@ -184,33 +199,47 @@ module dcache(
     
     cpu_result_type next_cpu_res;
     
+//=================== Establish inputs and outputs to and from the cache ==============================
+
     // Get the necessary data from the mhub (mhub => cpu_req)
-    assign cpu_req.addr = (mhub.write_addr_valid) ? mhub.write_addr : mhub.read_addr; // MUX for whether mhub is writing to or reading from cache
-    assign cpu_req.data = mhub.write_data; // Take whatever write data the mhub has and check if it's valid later
-    assign cpu_req.rw = (mhub.write_addr_valid) ? 1 : 0; // 1 if a write, 0 if a read
-    assign cpu_req.valid = mhub.read_addr_valid || mhub.write_addr_valid; // don't know how to set this
+    assign cpu_req.addr = (mhub.read_addr_valid) ? mhub.read_addr : mhub.write_addr;
+    assign cpu_req.data = mhub.write_data;
+    assign cpu_req.rw = (mhub.write_addr_valid) ? 1 : 0;
+    assign cpu_req.valid = (mhub.read_addr_valid || mhub.write_addr_valid);
 	   
     // Send the necessary data to the mhub (cpu_res => mhub)
-    assign mhub.read_addr_ready = cpu_res.ready;
-    assign mhub.read_data = cpu_res.data;
-    assign mhub.read_data_valid = 0; // don't know how to set this
-    assign mhub.write_addr_ready = cpu_res.ready;
-    assign mhub.write_resp_valid = 0; // don't know how to set this
+//    assign mhub.read_data = cpu_res.data;
+//    assign mhub.read_addr_ready = cpu_res.ready;
+//    assign mhub.read_data_valid = !cpu_req.rw; // read data only valid if incoming request was a read?
+//    assign mhub.write_addr_ready = cpu_res.ready;
+//    assign mhub.write_resp_valid = cpu_req.rw; // write resp only valid if incoming request was a write?
     
     // Send the necessary data to the RAM (mem_req => ram)
     assign ram.read_addr = mem_req.addr;
-    assign ram.read_addr_valid =  mem_req.valid && !mem_req.rw;
     assign ram.write_addr = mem_req.addr;
-    assign ram.write_addr_valid = mem_req.valid && mem_req.rw; 
     assign ram.write_data = mem_req.data;
+    assign ram.read_addr_valid = !mem_req.rw && mem_req.valid;
+    assign ram.write_addr_valid = mem_req.rw && mem_req.valid;
+    assign ram.strobe = be; // I think we were supposed to be given logic for these two signals
+    assign ram.size = block_offset;
     
     // Get the necessary data from the RAM (ram => mem_data)
     assign mem_data.data = ram.read_data;
-    assign mem_data.ready = (ram.read_addr_ready || ram.write_addr_ready);
-    
-    
+    assign mem_data.ready = (mem_req.rw) ? ram.write_addr_ready : ram.read_addr_ready;
+    assign mem_data.valid = (mem_req.rw) ? ram.write_resp_valid : ram.read_data_valid;
+
+//=======================================================================================================
 	
+	typedef enum {idle, compare_tag, allocate, writeback} cache_state_type;
+    cache_state_type state, next_state;
+    
 	//FSM for Cache Controller
+	
+	assign hit = (cpu_req.addr[TAG_MSB:TAG_LSB] == tag_read.tag) && tag_read.valid;
+	
+    initial begin // set FSM to Compare Stage initially
+        state = compare_stage;
+    end
     
     always_ff @(posedge clk) begin
         state <= next_state;
@@ -219,25 +248,41 @@ module dcache(
     always_comb 
     begin
         case(state)
-            idle:
-            begin
-            
-            end
             compare_tag:
             begin
-            
+                mhub.read_addr_ready = 1;
+                mhub.write_addr_ready 1;
+                mhub.read_data_valid = 0;
+                mhub.write_resp_valid = 0;
+                
+                // Next Stage calculation
+                if (mhub.write_addr_valid &&  hit) // successful write
+                begin
+                    
+                    next_state = compare_tag; // stay in compare_tag on a successful read or write to cache
+                end
+                else if (cpu_req.valid && tag_read.dirty && !hit) next_state = writeback; // move to writeback on replacement
+                else if (cpu_req.valid && !tag_read.dirty && !hit) next_state = allocate; // move to allocate to populate empty entry
+                else next_state = compare_tag; // default stay in compare_tag state
             end
             
             allocate:
             begin
-            
+                
+                // Next Stage calculation
+                if (!cpu_res.ready || !mem_data.ready) next_state = allocate; // stay in allocate if response or memory isn't ready
+                else if (cpu_res_ready && mem_data.ready) next_state = compare_tag; // return to compare_tag when both response and memory are ready
+                else next_state = allocate; // default stay in allocate state
             end
             
             writeback:
             begin
-            
-            end
-                    
+                
+                // Next Stage calculation
+                if (!mem_data.ready) next_state = writeback; // stay in writeback until the memory is ready
+                else if (mem_data.ready) next_state = allocate; // go to allocate when memory is ready
+                else next_state = writeback; // default stay in writeback
+            end       
         endcase
     end
     
@@ -246,6 +291,9 @@ module dcache(
 	
 
     L1_cache_tag L1_tags(.*);
+    
+    assign data_req = cpu_req;
+    assign data_write = mhub.write_data;
     L1_cache_data L1_data(.*);
 
 endmodule

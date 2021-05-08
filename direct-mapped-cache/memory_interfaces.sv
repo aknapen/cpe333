@@ -81,11 +81,12 @@ interface axi_bus_rw #(parameter WIDTH=32);		// similar to AXI-lite bus - read/w
 	logic lu;  //unsigned number
 
 	modport controller (
+	        input read_addr_ready, read_data, read_data_valid,
+			input  write_addr_ready, write_resp_valid, //write_data_ready,
 			output read_addr, read_addr_valid, //read_data_ready,
 			output write_addr, write_addr_valid, write_data, //write_data_valid,
-			output size, lu, strobe,
-			input read_addr_ready, read_data, read_data_valid,
-			input  write_addr_ready, write_resp_valid); //write_data_ready,
+			output size, lu, strobe);
+			
 
 	modport device (
 			input read_addr, read_addr_valid, //read_data_ready, 
