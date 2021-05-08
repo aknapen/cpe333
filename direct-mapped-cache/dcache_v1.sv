@@ -252,6 +252,7 @@ module dcache(
         case(state)
             compare_tag:
             begin
+//                $display("Entered compare tag");
                 mhub.read_addr_ready = 1;
                 mhub.write_addr_ready = 1;
                 mhub.read_data_valid = 0;
@@ -260,6 +261,7 @@ module dcache(
                 // Next Stage calculation
                 if (write_hit) // successful write
                 begin
+//                    $display("Succesful write");
                     tag_write.dirty = 1; // data in cache no longer corresponds to data in memory
                     mhub.write_resp_valid = 1;
                     from_ram = 0; // writing from CPU data, not from RAM
@@ -268,6 +270,7 @@ module dcache(
                 
                 else if (read_hit) // successful read
                 begin
+//                    $display("Succesful read");
 //                    mhub.read_data = data_read[127-((3-block_offset)*WORD_WIDTH):block_offset*WORD_WIDTH]; // grab the correct word from the block read
                     mhub.read_data = data_read>>(block_offset*WORD_WIDTH);
                     mhub.read_data_valid = 1;
@@ -275,13 +278,21 @@ module dcache(
                 
                 else if (tag_read.dirty && !(read_hit && write_hit)) 
                 begin
+//                    $display("Going to writeback from compare_tag");
                     ram.write_data = data_read; // writing the old cache entry to RAM
                     next_state = writeback; // move to writeback on replacement
                 end
                 
-                else if (!tag_read.dirty && !(read_hit && write_hit)) next_state = allocate; // move to allocate to populate empty entry
-                
-                else next_state = compare_tag; // default stay in compare_tag state
+                else if (!tag_read.dirty && !(read_hit && write_hit)) 
+                begin
+//                    $display("Going to allocate from compare_tag");
+                    next_state = allocate; // move to allocate to populate empty entry
+                end
+                else 
+                begin
+//                    $display("Staying in compare_tag by default");
+                    next_state = compare_tag; // default stay in compare_tag state
+                end
             end
             
             allocate:
@@ -293,14 +304,16 @@ module dcache(
                 ram.read_addr = mhub.read_addr;
                 
                 // Next Stage calculation
-                if (!ram.read_addr_ready) 
+                if (!ram.read_data_valid) 
                 begin
+//                    $display("RAM not ready; staying in allocate");
                     ram.read_addr_valid = 1;
                     next_state = allocate; // stay in allocate if response or memory isn't ready
                 end
                
-                else if (ram.read_addr_ready) 
+                else if (ram.read_data_valid) 
                 begin
+//                    $display("RAM ready, transitioning from allocate to compare_tag");
                     ram.read_addr_valid = 0; // disable reading from RAM while saving into the cache
                     from_ram = 1;
                     tag_write.tag = (tag_req.we) ? mhub.write_addr[TAG_MSB:TAG_LSB] : mhub.read_addr[TAG_MSB:TAG_LSB];
@@ -309,7 +322,11 @@ module dcache(
                     next_state = compare_tag; // return to compare_tag when both response and memory are ready
                 end
                 
-                else next_state = allocate; // default stay in allocate state
+                else 
+                begin
+//                    $display("Staying in allocate by default");
+                    next_state = allocate; // default stay in allocate state
+                end
             end
             
             writeback:
@@ -322,18 +339,30 @@ module dcache(
                 ram.write_addr = {tag_write.tag, mhub.write_addr[11:0]};
                 
                 // Next Stage calculation
-                if (!ram.write_addr_ready) next_state = writeback; // stay in writeback until the memory is ready
-                
+                if (!ram.write_addr_ready) 
+                begin
+//                    $display("RAM not ready, staying in writeback");
+                    next_state = writeback; // stay in writeback until the memory is ready
+                end
                 else if (ram.write_addr_ready)
                 begin
+//                    $display("RAM ready, switching to allocate from writeback");
                     tag_write.dirty = 0; // data that was in the cache is now aligned with what's in the memory
                     next_state = allocate; // go to allocate when memory is ready
                 end
                 
-                else next_state = writeback; // default stay in writeback
+                else 
+                begin
+//                    $display("Staying in allocate by default");
+                    next_state = writeback; // default stay in writeback
+                end
             end
             
-            default: next_state = compare_tag;       
+            default:
+            begin 
+//                $display("Going to compare tag by default");
+                next_state = compare_tag;     
+            end  
         endcase
     end
 	
