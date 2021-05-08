@@ -203,10 +203,10 @@ module dcache(
 //=================== Establish inputs and outputs to and from the cache ==============================
 
     // Get the necessary data from the mhub (mhub => cpu_req)
-    assign cpu_req.addr = (mhub.read_addr_valid) ? mhub.read_addr : mhub.write_addr;
-    assign cpu_req.data = mhub.write_data;
-    assign cpu_req.rw = (mhub.write_addr_valid) ? 1 : 0;
-    assign cpu_req.valid = (mhub.read_addr_valid || mhub.write_addr_valid);
+//    assign cpu_req.addr = (mhub.read_addr_valid) ? mhub.read_addr : mhub.write_addr;
+//    assign cpu_req.data = mhub.write_data;
+//    assign cpu_req.rw = (mhub.write_addr_valid) ? 1 : 0;
+//    assign cpu_req.valid = (mhub.read_addr_valid || mhub.write_addr_valid);
 	   
     // Send the necessary data to the mhub (cpu_res => mhub)
 //    assign mhub.read_data = cpu_res.data;
@@ -216,18 +216,18 @@ module dcache(
 //    assign mhub.write_resp_valid = cpu_req.rw; // write resp only valid if incoming request was a write?
     
     // Send the necessary data to the RAM (mem_req => ram)
-    assign ram.read_addr = mem_req.addr;
-    assign ram.write_addr = mem_req.addr;
-    assign ram.write_data = mem_req.data;
-    assign ram.read_addr_valid = !mem_req.rw && mem_req.valid;
-    assign ram.write_addr_valid = mem_req.rw && mem_req.valid;
-    assign ram.strobe = be; // I think we were supposed to be given logic for these two signals
-    assign ram.size = block_offset;
+//    assign ram.read_addr = mem_req.addr;
+//    assign ram.write_addr = mem_req.addr;
+//    assign ram.write_data = mem_req.data;
+//    assign ram.read_addr_valid = !mem_req.rw && mem_req.valid;
+//    assign ram.write_addr_valid = mem_req.rw && mem_req.valid;
+//    assign ram.strobe = be; // I think we were supposed to be given logic for these two signals
+//    assign ram.size = block_offset;
     
     // Get the necessary data from the RAM (ram => mem_data)
-    assign mem_data.data = ram.read_data;
-    assign mem_data.ready = (mem_req.rw) ? ram.write_addr_ready : ram.read_addr_ready;
-    assign mem_data.valid = (mem_req.rw) ? ram.write_resp_valid : ram.read_data_valid;
+//    assign mem_data.data = ram.read_data;
+//    assign mem_data.ready = (mem_req.rw) ? ram.write_addr_ready : ram.read_addr_ready;
+//    assign mem_data.valid = (mem_req.rw) ? ram.write_resp_valid : ram.read_data_valid;
 
 //=======================================================================================================
 	
@@ -236,10 +236,11 @@ module dcache(
     
 	//FSM for Cache Controller
 	
-	assign hit = (cpu_req.addr[TAG_MSB:TAG_LSB] == tag_read.tag) && tag_read.valid;
+	assign write_hit = ((mhub.write_addr[TAG_MSB:TAG_LSB] == tag_read.tag) && mhub.write_addr_valid) && tag_read.valid;
+	assign read_hit = ((mhub.read_addr[TAG_MSB:TAG_LSB] == tag_read.tag) && mhub.read_addr_valid) && tag_read.valid;
 	
     initial begin // set FSM to Compare Stage initially
-        state = compare_stage;
+        state = compare_tag;
     end
     
     always_ff @(posedge clk) begin
@@ -252,12 +253,12 @@ module dcache(
             compare_tag:
             begin
                 mhub.read_addr_ready = 1;
-                mhub.write_addr_ready 1;
+                mhub.write_addr_ready = 1;
                 mhub.read_data_valid = 0;
                 mhub.write_resp_valid = 0;
                 
                 // Next Stage calculation
-                if (mhub.write_addr_valid && hit) // successful write
+                if (mhub.write_addr_valid && write_hit) // successful write
                 begin
                     tag_write.dirty = 1; // data in cache no longer corresponds to data in memory
                     mhub.write_resp_valid = 1;
@@ -265,19 +266,21 @@ module dcache(
                     next_state = compare_tag; // stay in compare_tag on a successful read or write to cache
                 end
                 
-                else if (mhub.read_addr_valid && hit) // successful read
+                else if (mhub.read_addr_valid && read_hit) // successful read
                 begin
-                    mhub.read_data = data_read[127-((3-block_offset)*WORD_WIDTH):block_offset*WORD_WIDTH]; // grab the correct word from the block read
+//                    mhub.read_data = data_read[127-((3-block_offset)*WORD_WIDTH):block_offset*WORD_WIDTH]; // grab the correct word from the block read
+                    mhub.read_data = data_read>>(block_offset*WORD_WIDTH);
                     mhub.read_data_valid = 1;
                 end
                 
-                else if (cpu_req.valid && tag_read.dirty && !hit) 
+                else if ((mhub.read_addr_valid || mhub.write_addr_valid) && tag_read.dirty && !(read_hit || write_hit)) 
                 begin
                     ram.write_data = data_read; // writing the old cache entry to RAM
                     next_state = writeback; // move to writeback on replacement
                 end
                 
-                else if (cpu_req.valid && !tag_read.dirty && !hit) next_state = allocate; // move to allocate to populate empty entry
+                else if ((mhub.read_addr_valid || mhub.write_addr_valid) && !tag_read.dirty && !(read_hit || write_hit)) next_state = allocate; // move to allocate to populate empty entry
+                
                 else next_state = compare_tag; // default stay in compare_tag state
             end
             
@@ -290,13 +293,13 @@ module dcache(
                 ram.read_addr = cpu_req.addr;
                 
                 // Next Stage calculation
-                if (!cpu_res.ready || !mem_data.ready) 
+                if (!ram.read_addr_ready) 
                 begin
                     ram.read_addr_valid = 1;
                     next_state = allocate; // stay in allocate if response or memory isn't ready
                 end
                
-                else if (cpu_res_ready && mem_data.ready) 
+                else if (ram.read_addr_ready) 
                 begin
                     ram.read_addr_valid = 0; // disable reading from RAM while saving into the cache
                     from_ram = 1;
@@ -311,10 +314,22 @@ module dcache(
             
             writeback:
             begin
+                ram.read_addr_valid = 0; // disable reading from the RAM
+                ram.write_addr_valid = 1; // enable writing to the RAM
+                mhub.read_addr_ready = 0; // don't want to read from the RAM in this stage
+                mhub.write_addr_ready = 0; // data has not been written yet
+                mhub.read_data_valid = 0; // not reading data from RAM in this stage
+                ram.write_addr = {write_tag.tag, cpu_req.addr[11:0]};
                 
                 // Next Stage calculation
-                if (!mem_data.ready) next_state = writeback; // stay in writeback until the memory is ready
-                else if (mem_data.ready) next_state = allocate; // go to allocate when memory is ready
+                if (!ram.write_addr_ready) next_state = writeback; // stay in writeback until the memory is ready
+                
+                else if (ram.write_addr_ready)
+                begin
+                    tag_write.dirty = 0; // data that was in the cache is now aligned with what's in the memory
+                    next_state = allocate; // go to allocate when memory is ready
+                end
+                
                 else next_state = writeback; // default stay in writeback
             end       
         endcase
