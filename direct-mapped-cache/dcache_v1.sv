@@ -257,12 +257,26 @@ module dcache(
                 mhub.write_resp_valid = 0;
                 
                 // Next Stage calculation
-                if (mhub.write_addr_valid &&  hit) // successful write
+                if (mhub.write_addr_valid && hit) // successful write
                 begin
-                    tag_write.dirty = 1;
+                    tag_write.dirty = 1; // data in cache no longer corresponds to data in memory
+                    mhub.write_resp_valid = 1;
+                    from_ram = 0; // writing from CPU data, not from RAM
                     next_state = compare_tag; // stay in compare_tag on a successful read or write to cache
                 end
-                else if (cpu_req.valid && tag_read.dirty && !hit) next_state = writeback; // move to writeback on replacement
+                
+                else if (mhub.read_addr_valid && hit) // successful read
+                begin
+                    mhub.read_data = data_read[127-((3-block_offset)*WORD_WIDTH):block_offset*WORD_WIDTH]; // grab the correct word from the block read
+                    mhub.read_data_valid = 1;
+                end
+                
+                else if (cpu_req.valid && tag_read.dirty && !hit) 
+                begin
+                    ram.write_data = data_read; // writing the old cache entry to RAM
+                    next_state = writeback; // move to writeback on replacement
+                end
+                
                 else if (cpu_req.valid && !tag_read.dirty && !hit) next_state = allocate; // move to allocate to populate empty entry
                 else next_state = compare_tag; // default stay in compare_tag state
             end
