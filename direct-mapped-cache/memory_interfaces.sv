@@ -30,7 +30,7 @@ package memory_bus_sizes;
     parameter WORD_SIZE = DATA_WIDTH / 8;  //bytes  /STRB -strobe
     parameter MMIO_START_ADDR = 'h11000000;
     //for blocked memory
-    parameter BLOCK_SIZE =16;   //bytes, power of 2
+    parameter BLOCK_SIZE = 16;   //bytes, power of 2
     parameter BLOCK_WIDTH = BLOCK_SIZE * 8;
     parameter WORD_ADDR_LSB = $clog2(WORD_SIZE);
     parameter BLOCK_ADDR_LSB = $clog2(BLOCK_SIZE);

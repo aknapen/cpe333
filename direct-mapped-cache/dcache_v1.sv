@@ -103,7 +103,8 @@ module L1_cache_data (
             if(!from_ram) begin
               for (int b = 0; b < WORD_SIZE; b++) begin
                 if (be[b]) begin
-                    data_mem[data_req.index][block_offset*WORD_WIDTH+b*8+:8] <= data_write[block_offset*WORD_WIDTH+b*8+:8];  //[b*8+:8];
+//                    data_mem[data_req.index][block_offset*WORD_WIDTH+b*8+:8] <= data_write[block_offset*WORD_WIDTH+b*8+:8];  //[b*8+:8];
+                    data_mem[data_req.index][block_offset*WORD_WIDTH+b*8+:8] <= data_write[7:0];
                 end
               end
             end
@@ -261,20 +262,24 @@ module dcache(
                 if (mhub.read_addr_valid) // if we are trying to read or write
                 begin
                     tag_req.we = 0;
-                    tag_req.index = mhub.read_addr[11:2];
+//                    tag_req.index = mhub.read_addr[11:2];
+                    tag_req.index = mhub.read_addr[11:4];
                     data_req.we = 0;
-                    data_req.index = mhub.read_addr[11:2];
+//                    data_req.index = mhub.read_addr[11:2];
+                    data_req.index = mhub.read_addr[11:4];
                 end
                 
                 else if (mhub.write_addr_valid) // if we're trying to write
                 begin
                     tag_req.we = 0;
-                    tag_req.index = mhub.write_addr[11:2];
+//                    tag_req.index = mhub.write_addr[11:2];
+//                    tag_req.index = mhub.write_addr[11:4];
                     data_req.we = 1;
-                    data_req.index = mhub.write_addr[11:2];
+//                    data_req.index = mhub.write_addr[11:2];
+//                    data_req.index = mhub.write_addr[11:4];
                     data_write = mhub.write_data;
-                    be = mhub.write_addr[3:0]; // write to the same location we tried to read from
-                    block_offset = mhub.write_addr[3:2];
+//                    be = mhub.write_addr[3:0]; // write to the same location we tried to read from
+//                    block_offset = mhub.write_addr[3:2];
                 end
                 
                 mhub.read_addr_ready = 1;
@@ -286,6 +291,7 @@ module dcache(
                 if (write_hit) // successful write
                 begin
 //                    $display("Succesful write");
+                    tag_req.we = 1;
                     tag_write.dirty = 1; // data in cache no longer corresponds to data in memory
                     mhub.write_resp_valid = 1;
                     from_ram = 0; // writing from CPU data, not from RAM
@@ -300,14 +306,14 @@ module dcache(
                     next_state = compare_tag; // stay in compare_tag on a successful read from cache
                 end
                 
-                else if (tag_read.dirty && !(read_hit && write_hit) && (mhub.read_addr_valid || mhub.write_addr_valid)) 
+                else if (tag_read.dirty && !(read_hit || write_hit) && (mhub.read_addr_valid || mhub.write_addr_valid)) 
                 begin
 //                    $display("Going to writeback from compare_tag");
                     ram.write_data = data_read; // writing the old cache entry to RAM
                     next_state = writeback; // move to writeback on replacement
                 end
                 
-                else if (!tag_read.dirty && !(read_hit && write_hit) && (mhub.read_addr_valid || mhub.write_addr_valid)) 
+                else if (!tag_read.dirty && !(read_hit || write_hit) && (mhub.read_addr_valid || mhub.write_addr_valid)) 
                 begin
 //                    $display("Going to allocate from compare_tag");
                     next_state = allocate; // move to allocate to populate empty entry
@@ -345,7 +351,7 @@ module dcache(
                     tag_req.we = 1; // change request to a write
                     
                     // Set tag data to write to the module
-                    tag_write.tag = (mhub.read_addr_valid) ? mhub.read_addr[TAG_MSB:TAG_LSB] : mhub.write_addr[TAG_MSB:TAG_LSB];
+//                    tag_write.tag = (mhub.read_addr_valid) ? mhub.read_addr[TAG_MSB:TAG_LSB] : mhub.write_addr[TAG_MSB:TAG_LSB];
                     tag_write.valid = 1;
                     tag_write.dirty = 0;
                     
@@ -354,8 +360,8 @@ module dcache(
                     
                     // Set data to write to the module
                     data_write = ram.read_data;
-                    be = (mhub.read_addr_valid) ? mhub.read_addr[3:0] : mhub.write_addr[3:0]; // write to the same location we tried to read from
-                    block_offset = (mhub.read_addr_valid) ? mhub.read_addr[3:2] : mhub.write_addr[3:2];
+//                    be = (mhub.read_addr_valid) ? mhub.read_addr[3:0] : mhub.write_addr[3:0]; // write to the same location we tried to read from
+//                    block_offset = (mhub.read_addr_valid) ? mhub.read_addr[3:2] : mhub.write_addr[3:2];
                     next_state = compare_tag; // return to compare_tag when both response and memory are ready
                 end
                 
@@ -373,8 +379,8 @@ module dcache(
                 mhub.read_addr_ready = 0; // don't want to read from the RAM in this stage
                 mhub.write_addr_ready = 0; // data has not been written yet
                 mhub.read_data_valid = 0; // not reading data from RAM in this stage
-                ram.write_addr = {tag_write.tag, mhub.write_addr[11:0]};
-                
+                ram.write_addr[31:12] = tag_read.tag;
+                ram.write_addr[11:0] = (mhub.write_addr_valid) ? mhub.write_addr[11:0] : mhub.read_addr[11:0];                
                 // Next Stage calculation
                 if (!ram.write_addr_ready) 
                 begin
@@ -403,12 +409,22 @@ module dcache(
         endcase
     end
 	
-//    assign tag_req.index = (mhub.read_addr_valid) ? mhub.read_addr[11:2] : mhub.write_addr[11:2]; // grab index from address field
+	always_comb
+	begin
+	   tag_req.index = (mhub.read_addr_valid) ? mhub.read_addr[11:4] : mhub.write_addr[11:4]; // grab index from address field
+	   tag_write.tag = (mhub.read_addr_valid) ? mhub.read_addr[TAG_MSB:TAG_LSB] : mhub.write_addr[TAG_MSB:TAG_LSB]; // acquire the tag from the address field
+	   
+	   data_req.index = (mhub.read_addr_valid) ? mhub.read_addr[11:4] : mhub.write_addr[11:4]; // grab index from address field
+	   be = (mhub.read_addr_valid) ? mhub.read_addr[3:0] : mhub.write_addr[3:0]; // be is the concatenation of the block and byte offset fields
+	   block_offset = (mhub.read_addr_valid) ? mhub.read_addr[3:2] : mhub.write_addr[3:2];
+	end
+	
+//    assign tag_req.index = (mhub.read_addr_valid) ? mhub.read_addr[11:4] : mhub.write_addr[11:4]; // grab index from address field
 //    assign tag_req.we = (mhub.write_addr_valid) ? 1 : 0; // only enable write on a write request
 //    assign tag_write.tag = (mhub.read_addr_valid) ? mhub.read_addr[TAG_MSB:TAG_LSB] : mhub.write_addr[TAG_MSB:TAG_LSB]; // acquire the tag from the address field
     L1_cache_tag L1_tags(.*);
 
-//    assign data_req.index = (mhub.read_addr_valid) ? mhub.read_addr[11:2] : mhub.write_addr[11:2]; // grab index from address field
+//    assign data_req.index = (mhub.read_addr_valid) ? mhub.read_addr[11:4] : mhub.write_addr[11:4]; // grab index from address field
 //    assign data_req.we = (mhub.write_addr_valid) ? 1 : 0; // only enable write on a write request
 //    assign data_write = (from_ram) ? ram.read_data : mhub.write_data;
 //    assign be = (mhub.read_addr_valid) ? mhub.read_addr[3:0] : mhub.write_addr[3:0]; // be is the concatenation of the block and byte offset fields

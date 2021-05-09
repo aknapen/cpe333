@@ -246,8 +246,8 @@ module sim_slow_ram #(
     logic [BLOCK_WIDTH-1:0] rami_din, rami_dout, ramd_din, ramd_dout;
     logic rami_en, rami_we, ramd_en, ramd_we; 
     
-    assign dcache_baddr = dcache.write_addr_valid ? dcache.write_addr:dcache.read_addr;
-    
+//    assign dcache_baddr = dcache.write_addr_valid ? dcache.write_addr:dcache.read_addr;
+    assign dcache_baddr = dcache.write_addr_valid ? dcache.write_addr[ADDR_WIDTH-1:BLOCK_ADDR_LSB] : dcache.read_addr[ADDR_WIDTH-1:BLOCK_ADDR_LSB];    
     
     sim_delay_ram #(
         .PORT_NAME("Instruction"), .MEM_DELAY(MEM_DELAY)
