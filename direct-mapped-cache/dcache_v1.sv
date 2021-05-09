@@ -103,8 +103,8 @@ module L1_cache_data (
             if(!from_ram) begin
               for (int b = 0; b < WORD_SIZE; b++) begin
                 if (be[b]) begin
-//                    data_mem[data_req.index][block_offset*WORD_WIDTH+b*8+:8] <= data_write[block_offset*WORD_WIDTH+b*8+:8];  //[b*8+:8];
-                    data_mem[data_req.index][block_offset*WORD_WIDTH+b*8+:8] <= data_write[7:0];
+                    data_mem[data_req.index][block_offset*WORD_WIDTH+b*8+:8] <= data_write[block_offset*WORD_WIDTH+b*8+:8];  //[b*8+:8];
+//                    data_mem[data_req.index][block_offset*WORD_WIDTH+b*8+:8] <= data_write[7:0];
                 end
               end
             end
@@ -277,7 +277,7 @@ module dcache(
                     data_req.we = 1;
 //                    data_req.index = mhub.write_addr[11:2];
 //                    data_req.index = mhub.write_addr[11:4];
-                    data_write = mhub.write_data;
+                    data_write = mhub.write_data << (block_offset*WORD_WIDTH);
 //                    be = mhub.write_addr[3:0]; // write to the same location we tried to read from
 //                    block_offset = mhub.write_addr[3:2];
                 end
@@ -295,6 +295,7 @@ module dcache(
                     tag_write.dirty = 1; // data in cache no longer corresponds to data in memory
                     mhub.write_resp_valid = 1;
                     from_ram = 0; // writing from CPU data, not from RAM
+                    
                     next_state = compare_tag; // stay in compare_tag on a successful write to cache
                 end
                 
@@ -415,7 +416,8 @@ module dcache(
 	   tag_write.tag = (mhub.read_addr_valid) ? mhub.read_addr[TAG_MSB:TAG_LSB] : mhub.write_addr[TAG_MSB:TAG_LSB]; // acquire the tag from the address field
 	   
 	   data_req.index = (mhub.read_addr_valid) ? mhub.read_addr[11:4] : mhub.write_addr[11:4]; // grab index from address field
-	   be = (mhub.read_addr_valid) ? mhub.read_addr[3:0] : mhub.write_addr[3:0]; // be is the concatenation of the block and byte offset fields
+//	   be = (mhub.read_addr_valid) ? mhub.read_addr[3:0] : mhub.write_addr[3:0]; // be is the concatenation of the block and byte offset fields
+       be = mhub.strobe;
 	   block_offset = (mhub.read_addr_valid) ? mhub.read_addr[3:2] : mhub.write_addr[3:2];
 	end
 	
