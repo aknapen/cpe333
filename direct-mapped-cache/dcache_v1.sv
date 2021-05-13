@@ -134,16 +134,17 @@ module dcache(
     cache_data_type data_write; // data to be written to the cache data module
     cache_req_type data_req; // request info for reading from or writing to the cache data module
 	
-	typedef enum {idle, compare_tag, allocate, writeback} cache_state_type;
+	typedef enum {compare_tag, allocate, writeback} cache_state_type;
     cache_state_type state, next_state;
     
 	//FSM for Cache Controller
 	
+	// Differentiate between a write hit and a read hit to the cache
 	assign write_hit = ((mhub.write_addr[TAG_MSB:TAG_LSB] == tag_read.tag) && mhub.write_addr_valid) && tag_read.valid;
 	assign read_hit = ((mhub.read_addr[TAG_MSB:TAG_LSB] == tag_read.tag) && mhub.read_addr_valid) && tag_read.valid;
     
     always_ff @(posedge clk) begin
-        state <= next_state;
+        state <= next_state; // Advance state of the FSM on each clk edge
     end
     
     always_comb 
@@ -153,19 +154,20 @@ module dcache(
             begin
                 if (mhub.read_addr_valid) // if we are trying to read or write
                 begin
-                    tag_req.we = 0;
-                    tag_req.index = mhub.read_addr[11:4];
-                    data_req.we = 0;
-                    data_req.index = mhub.read_addr[11:4];
+                    tag_req.we = 0; // disable writing to cache tag module
+                    tag_req.index = mhub.read_addr[11:4]; // grab index from incoming address
+                    data_req.we = 0; // disable writing to cache data module on a read
+                    data_req.index = mhub.read_addr[11:4]; // grab index from incoming address
                 end
                 
                 else if (mhub.write_addr_valid) // if we're trying to write
                 begin
-                    tag_req.we = 0;
-                    data_req.we = 1;
-                    data_write = mhub.write_data << (block_offset*WORD_WIDTH);
+                    tag_req.we = 0; // disable writing to cache tag module
+                    data_req.we = 1; // enable writing to cache data module for a write request
+                    data_write = mhub.write_data << (block_offset*WORD_WIDTH); // align write data into the block to be written
                 end
                 
+                // Communicate back to the mhub the return status of the request
                 mhub.read_addr_ready = 1;
                 mhub.write_addr_ready = 1;
                 mhub.read_data_valid = 0;
@@ -184,8 +186,8 @@ module dcache(
                 
                 else if (read_hit) // successful read
                 begin
-                    mhub.read_data = data_read >> (block_offset*WORD_WIDTH);
-                    mhub.read_data_valid = 1;
+                    mhub.read_data = data_read >> (block_offset*WORD_WIDTH); // realign read data for the mhub
+                    mhub.read_data_valid = 1; // let mhub know that data is ready to be used
                     next_state = compare_tag; // stay in compare_tag on a successful read from cache
                 end
                 
@@ -207,6 +209,8 @@ module dcache(
             
             allocate:
             begin
+            
+                // Send appropriate signals to the RAM and mhub
                 ram.write_addr_valid = 0;
                 mhub.read_addr_ready = 0;
                 mhub.write_addr_ready = 0;
@@ -216,14 +220,14 @@ module dcache(
                 // Next Stage calculation
                 if (!ram.read_data_valid) 
                 begin
-                    ram.read_addr_valid = 1;
+                    ram.read_addr_valid = 1; // let RAM know we are trying to read from an address
                     next_state = allocate; // stay in allocate if response or memory isn't ready
                 end
                
                 else if (ram.read_data_valid) 
                 begin
                     ram.read_addr_valid = 0; // disable reading from RAM while saving into the cache
-                    from_ram = 1;
+                    from_ram = 1; // indicate to the cache data module that incoming data is from RAM
                     
                     // Set up request to write to cache tag module
                     tag_req.we = 1; // change request to a write
@@ -236,7 +240,7 @@ module dcache(
                     data_req.we = 1; // change request to a write
                     
                     // Set data to write to the module
-                    data_write = ram.read_data;
+                    data_write = ram.read_data; // provide data to be written to cache data module
                     next_state = compare_tag; // return to compare_tag when both response and memory are ready
                 end
                 
@@ -248,13 +252,17 @@ module dcache(
             
             writeback:
             begin
+            
+                // Send appropriate signals to the RAM and mhub
                 ram.read_addr_valid = 0; // disable reading from the RAM
                 ram.write_addr_valid = 1; // enable writing to the RAM
                 mhub.read_addr_ready = 0; // don't want to read from the RAM in this stage
                 mhub.write_addr_ready = 0; // data has not been written yet
                 mhub.read_data_valid = 0; // not reading data from RAM in this stage
-                ram.write_addr[31:12] = tag_read.tag;
-                ram.write_addr[11:0] = (mhub.write_addr_valid) ? mhub.write_addr[11:0] : mhub.read_addr[11:0];                
+                // Configure address to write in RAM
+                ram.write_addr[31:12] = tag_read.tag; 
+                ram.write_addr[11:0] = (mhub.write_addr_valid) ? mhub.write_addr[11:0] : mhub.read_addr[11:0];  
+                              
                 // Next Stage calculation
                 if (!ram.write_addr_ready) 
                 begin
@@ -285,8 +293,8 @@ module dcache(
 	   tag_write.tag = (mhub.read_addr_valid) ? mhub.read_addr[TAG_MSB:TAG_LSB] : mhub.write_addr[TAG_MSB:TAG_LSB]; // acquire the tag from the address field
 	   
 	   data_req.index = (mhub.read_addr_valid) ? mhub.read_addr[11:4] : mhub.write_addr[11:4]; // grab index from address field
-       be = mhub.strobe;
-	   block_offset = (mhub.read_addr_valid) ? mhub.read_addr[3:2] : mhub.write_addr[3:2];
+       be = mhub.strobe; // mhub provides which bytes in a word to write to in the cache data module
+	   block_offset = (mhub.read_addr_valid) ? mhub.read_addr[3:2] : mhub.write_addr[3:2]; // mhub provides the block offset to be written to
 	end
 	
     L1_cache_tag L1_tags(.*);
