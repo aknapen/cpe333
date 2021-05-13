@@ -20,6 +20,43 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
+ package cpu_types;
+       typedef enum logic [6:0] {
+           LUI      = 7'b0110111,
+           AUIPC    = 7'b0010111,
+           JAL      = 7'b1101111,
+           JALR     = 7'b1100111,
+           BRANCH   = 7'b1100011,
+           LOAD     = 7'b0000011,
+           STORE    = 7'b0100011,
+           OP_IMM   = 7'b0010011,
+           OP       = 7'b0110011,
+           SYSTEM   = 7'b1110011,
+           NOP      = 7'b0000000
+       } opcode_t;
+       
+       // struct for storing a given pipeline stage's instruction and PC value\
+       typedef struct packed{
+           opcode_t opcode;
+           logic [4:0] rs1_addr;
+           logic [4:0] rs2_addr;
+           logic [4:0] rd_addr;
+           logic rs1_used;
+           logic rs2_used;
+           logic rd_used;
+           logic [3:0] alu_fun;
+           logic memWrite;
+           logic memRead2;
+           logic regWrite;
+           logic [1:0] rf_wr_sel;
+           logic [2:0] mem_type;  //sign, size
+           logic ld_haz;
+           logic [31:0] pc;
+           logic invalid;
+           logic br_taken;
+       } instr_t;
+
+   endpackage
 
 module OTTER_MCU(input CLK,
                 input INTR,
@@ -32,41 +69,8 @@ module OTTER_MCU(input CLK,
                 output PROG_TX  // ADDED PROG_TX FOR PROGRAMMER
 );           
     
-    typedef enum logic [6:0] {
-        LUI      = 7'b0110111,
-        AUIPC    = 7'b0010111,
-        JAL      = 7'b1101111,
-        JALR     = 7'b1100111,
-        BRANCH   = 7'b1100011,
-        LOAD     = 7'b0000011,
-        STORE    = 7'b0100011,
-        OP_IMM   = 7'b0010011,
-        OP       = 7'b0110011,
-        SYSTEM   = 7'b1110011,
-        NOP      = 7'b0000000
-    } opcode_t;
-    
-    // struct for storing a given pipeline stage's instruction and PC value\
-    typedef struct packed{
-        opcode_t opcode;
-        logic [4:0] rs1_addr;
-        logic [4:0] rs2_addr;
-        logic [4:0] rd_addr;
-        logic rs1_used;
-        logic rs2_used;
-        logic rd_used;
-        logic [3:0] alu_fun;
-        logic memWrite;
-        logic memRead2;
-        logic regWrite;
-        logic [1:0] rf_wr_sel;
-        logic [2:0] mem_type;  //sign, size
-        logic ld_haz;
-        logic [31:0] pc;
-        logic invalid;
-        logic br_taken;
-    } instr_t;
-        
+    import cpu_types::*;
+      
     // ************************ BEGIN PROGRAMMER ************************ 
 
     wire RESET;
@@ -94,7 +98,6 @@ module OTTER_MCU(input CLK,
         
     logic [31:0] IF_ID_pc; // transmits the PC between the IF and ID stages
     logic [31:0] WB_rfIn; // connect to din for the reg file
-    logic ld_haz; // used to detect a load-use hazard
     logic jb_taken; // indicates if a jump or branch has been taken
     
     logic [31:0] MEM_aluResult; // holds the ALU result value inside the memory stage
@@ -102,162 +105,53 @@ module OTTER_MCU(input CLK,
     
     logic [31:0] mem_data; // MEM_DOUT2 wire
     
-    wire mepcWrite, csrWrite,intCLR, mie, intTaken;
-    wire [31:0] mepc, mtvec;
-   
-//=======================  BEGIN FETCH STAGE ===========================//
-    
-    logic [31:0] pc_in, pc_out, next_pc, jalr_pc, branch_pc, jump_pc, int_pc;   
-    logic pcWrite;
-    logic [2:0] pc_source;
-    logic memRead1;
-        
-    // Creates a 6-to-1 multiplexor used to select the source of the next PC
-    Mult6to1 PCdatasrc (next_pc, jalr_pc, branch_pc, jump_pc, mtvec, mepc, pc_source, pc_in);
-       
-    assign pcWrite = ~ld_haz; // only allow new PC through if we're not stalling
+    wire intTaken;
 
-    //PC is byte-addressed but our memory is word addressed 
-    ProgCount PC (.PC_CLK(CLK), .PC_RST(RESET), .PC_LD(pcWrite),
-                  .PC_DIN(pc_in), .PC_COUNT(pc_out));  
-                   
-    // Need to re-fetch decode instruction on a load-use hazard
-    always_comb
-    begin
-        if (~ld_haz)              
-            next_pc = pc_out + 4;    //PC is byte aligned, memory is word aligned (NEED TO CALC next_pc HERE SO IT'S READY BY NEXT INSTRUCTION 
-        else
-            next_pc = pc_out;                         
-    end    
-    
-    assign memRead1 = ~ld_haz; // can hardcode this to 1 since we always want to read an instr in the fetch stage
-   
-    //=======================  END FETCH STAGE ===========================//
-    
+    //=======================  BEGIN FETCH STAGE ===========================//
+
+    // Inputs to IF module
+    logic [31:0] jalr_pc, branch_pc, jump_pc; 
+    logic [2:0] pc_source;
+    logic ld_haz; // used to detect a load-use hazard
+
+    // Outputs from IF module
     logic [31:0] fetch_pc;
-    
-    always_comb
-    begin
-        fetch_pc = pc_out;
-        if (ld_haz) fetch_pc = pc_out-4;
-    end
-    
+    logic memRead1;
+
+    InstructionFetch IF(.*); 
+
+    //=======================  END FETCH STAGE ===========================//
+
     // PC REGISTER
     always_ff @(posedge CLK) // transfers PC from fetch to decode
     begin
         IF_ID_pc <= fetch_pc; // delay PC from fetch stage
     end
     
-   //======================= BEGIN DECODE STAGE ===========================//
+    
+//======================= BEGIN DECODE STAGE ===========================//
 
-    logic [31:0] IR; // instruction from fetch stage
-    logic [31:0] DE_A, DE_B; // inputs A and B that will be sent to the Execute Stage
+    logic [31:0] IR;
+    logic [31:0] DE_A, DE_B; // ALU  A and B that will be sent to the Execute Stage
+    logic [31:0] rs2; // Need this later for mem
+    logic [31:0] I_immed;
+    instr_t instr;
     
-    logic opA_sel;// select bits for registers A and B MUXes
-    logic [1:0] opB_sel; 
-    
-    logic [3:0] alu_fun; // specifies what operation the ALU will execute
-    logic [31:0] rs1, rs2, I_immed,S_immed,U_immed,aluBin,aluAin; // functional signals for the decode stage
-    
-    logic rs1_used, rs2_used, rd_used, memWrite, memRead2, regWrite;  // for calculating struct fields
-    
-    logic [1:0] wb_sel; // select bit for the writeback mux to the reg file
-    
-    opcode_t opcode; // specifies the opcode of the instruciton in the decode stage
-        
-    // Load-Use Hazard Detection
-    always_comb
-    begin
-        ld_haz = 0;
-        if (!jb_taken && !DE_EX_instr.br_taken && !DE_EX_instr.invalid &&
-            (DE_EX_instr.opcode == LOAD) && ((DE_EX_instr.rd_addr == IR[19:15]) || (DE_EX_instr.rd_addr == IR[24:20]))) 
-        begin
-            ld_haz = 1;
-        end
-    end
-    
-    // Creates a RISC-V register file
-    OTTER_registerFile RF (IR[19:15], IR[24:20], MEM_WB_instr.rd_addr, WB_rfIn, MEM_WB_instr.regWrite, rs1, rs2, CLK); // Register file
-    
-    // Instruction Decoder
-    OTTER_CU_Decoder CU_DECODER(.CU_OPCODE(IR[6:0]), .CU_FUNC3(IR[14:12]),.CU_FUNC7(IR[31:25]), 
-             .CU_ALU_SRCA(opA_sel), .CU_ALU_SRCB(opB_sel),.CU_ALU_FUN(alu_fun),.CU_RF_WR_SEL(wb_sel),
-             .intTaken(intTaken));    
-    
-    // Assign all control signals to be pushed through the pipeline
-    assign opcode = opcode_t'(IR[6:0]); 
-    assign rs1_used = ((opcode != LUI) && // only LUI, AUIPC, and JAL instruction don't use rs1
-                       (opcode != AUIPC) &&
-                       (opcode != NOP) &&
-                       (opcode != JAL)) ? 1 : 0;
-    assign rs2_used = ((opcode == BRANCH) || // only BRANCH, STORE, and OP instruction use rs2
-                       (opcode == STORE) ||
-                       (opcode == OP)) ? 1 : 0;
-    assign rd_used = ((opcode != BRANCH) && // only BRANCH and STORE instructions don't use an rd
-                      (opcode != NOP) &&
-                      (opcode != STORE)) ? 1 : 0;  
-    assign memWrite = (opcode == STORE) ? 1 : 0; // only enable mem write on a store instruction
-    assign memRead2 = ((opcode == LOAD)) ? 1 : 0; // only enable read from mem on a load instruction
-    assign regWrite = ((opcode != BRANCH) && // no rd for BRANCH or STORE instructions
-                       (opcode != NOP) &&
-                       (opcode != STORE)) ? 1 : 0;       
-                                                                           
-    // Generate immediates
-    assign S_immed = {{20{IR[31]}},IR[31:25],IR[11:7]};
-    assign I_immed = {{20{IR[31]}},IR[31:20]};
-    assign U_immed = {IR[31:12],{12{1'b0}}};
-    
-    // Creates a 2-to-1 multiplexor used to select the A input of the ALU 
-    Mult2to1 ALUAinput (rs1, U_immed, opA_sel, aluAin);
-    assign DE_A = aluAin; // ALU input A to transfer to the execute stage
-    
-    // Creates a 4-to-1 multiplexor used to select the B input of the ALU
-    Mult4to1 ALUBinput (rs2, I_immed, S_immed, IF_ID_pc, opB_sel, aluBin);
-    assign DE_B = aluBin; // ALU input B to transfer to the execute stage
+    InstructionDecode ID(.*);
+
 
 //======================= END DECODE STAGE ===========================//
 
     logic [31:0] EX_A, EX_B, EX_IR, EX_RS2, EX_I_immed;
-
     always_ff @(posedge CLK) // to push ALU inputs and instruction from Decode to Execute stage
-    begin
-        EX_A <= DE_A;
-        EX_B <= DE_B;
-        EX_IR <= IR;
-        EX_RS2 <= rs2; // Need this later for mem
-        EX_I_immed <= I_immed;
-    end
-    
-    instr_t instr;
-    always_comb
-    begin
-        instr = 72'b0;
-        if (~ld_haz) // Need to prevent passing instruction from decode to execute on a load-use hazard
-        begin // otherwise, assign decode control signals to be pushed to execute stage
-            instr.opcode = opcode;
-            instr.invalid = (jb_taken) || (EX_MEM_instr.br_taken); // Instruction invalid if either of prev2 instructions took a branch
-            instr.rs1_addr = IR[19:15];
-            instr.rs2_addr = IR[24:20];
-            instr.rd_addr = IR[11:7];
-            instr.rs1_used = rs1_used;
-            instr.rs2_used = rs2_used;
-            instr.rd_used = rd_used;
-            instr.alu_fun = alu_fun;
-            instr.memWrite = (memWrite) && (~instr.invalid); // If instruction is invalid don't write to mem
-            instr.memRead2 = memRead2;
-            instr.regWrite = (regWrite) && (~instr.invalid);  // If instruction is invalid don't write to reg
-            instr.rf_wr_sel = wb_sel;
-            instr.mem_type = IR[14:12]; // holds size and sign for memory module (funct3 in instruction)
-            instr.ld_haz = ld_haz;
-            instr.pc = IF_ID_pc; // get pc value from fetch stage
-            instr.br_taken = 0;   
+        begin
+            EX_A <= DE_A;
+            EX_B <= DE_B;
+            EX_IR <= IR;
+            EX_RS2 <= rs2; // Need this later for mem
+            EX_I_immed <= I_immed;
+            DE_EX_instr <= instr; // push instruction from decode to execute stage
         end
-    end
-
-    always_ff @(posedge CLK)
-    begin
-        DE_EX_instr <= instr; // push instruction from decode to execute stage
-    end
       
 //======================= BEGIN EXECUTE STAGE ===========================//
     logic [2:0] func_3; // needed for checking branch conditions
@@ -403,7 +297,7 @@ module OTTER_MCU(input CLK,
     
     // Sets up memory for the fetch stage and for memory accessing in Memory stage
     // In the future need to check on IO and Programmer stuff
-    OTTER_mem_byte #(14) memory  (.MEM_CLK(CLK),.MEM_ADDR1(pc_out),.MEM_ADDR2(MEM_aluResult),.MEM_DIN2(MEM_DIN2),
+    OTTER_mem_byte #(14) memory  (.MEM_CLK(CLK),.MEM_ADDR1(fetch_pc),.MEM_ADDR2(MEM_aluResult),.MEM_DIN2(MEM_DIN2),
                                .MEM_WRITE2(EX_MEM_instr.memWrite),.MEM_READ1(memRead1),.MEM_READ2(EX_MEM_instr.memRead2), .LD_HAZ(ld_haz),
                                .ERR(),.MEM_DOUT1(IR),.MEM_DOUT2(mem_data),.IO_IN(IOBUS_IN),.IO_WR(IOBUS_WR),.MEM_SIZE(EX_MEM_instr.mem_type[1:0]),.MEM_SIGN(mem_sign_after));
     
