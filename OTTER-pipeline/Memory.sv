@@ -1,3 +1,5 @@
+import cpu_types::*;
+
 module Memory (
     input CLK, ld_haz, memRead1, mem_sign_after,
     input [31:0] fetch_pc, MEM_aluResult, MEM_DIN2, IOBUS_IN,

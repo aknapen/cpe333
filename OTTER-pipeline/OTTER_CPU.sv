@@ -203,11 +203,8 @@ module OTTER_MCU(input CLK,
     // Mult4 to 1 ( PC+4, CSR reg, dout2 from mem, alu result, sel = wb_sel from decoder, out = finished register in
     
     // WB_rfIn is connected to the reg file 
-    logic [31:0] MEM_PC;
-    assign MEM_PC = MEM_WB_instr.pc + 4;
     
-    Mult4to1 regWriteback (MEM_PC,0, mem_data, WB_aluResult, MEM_WB_instr.rf_wr_sel, WB_rfIn);
-    
+        WriteBack WB(.*);
 
     // ************************ BEGIN PROGRAMMER ************************ 
 
