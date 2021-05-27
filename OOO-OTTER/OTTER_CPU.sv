@@ -176,21 +176,41 @@ module OTTER_MCU(input CLK,
     logic [31:0] aluResult, MEM_RS2;
     logic [31:0] int_pc;
     
+    RS_tag_type CDB_tag;
+    logic [31:0] CDB_value;
+    
     // Map Table
-    MapTable MT(.*);
+    MapTable MT(.*); // Maps Register -> Reservation Station
     
     // Reservation Stations / Functional Units
-    ReservationStation RS_Load1(.*);
     
+    // Load 1 reservation Station 
+    logic Load1_ready;
+    logic L1_V1_valid, L1_V2_valid;
+    assign Load1_ready = L1_V1_valid && L1_V2_valid;
+    // To FU:       V1, V2, Load1_ready, operand, destination_tag
+    // FU To RS:    Done
+    // FU To CDB:   Value, Destination_tag
+    ReservationStation RS_Load1(.*);
+    LoadUnit Load1(.*);
+    
+    
+    // Load 2 reservation station
     ReservationStation RS_Load2(.*);
+    LoadUnit Load2(.*);
     
     ReservationStation RS_Store1(.*);
+    StoreUnit Store1(.*);
     
     ReservationStation RS_Store2(.*);
+    StoreUnit Store2(.*);
     
     ReservationStation RS_ALU1(.*);
+    ALUUnit ALU1(.*);
     
     ReservationStation RS_ALU2(.*);
+    
+    ALUUnit ALU2(.*);
     
     // Register File
  
