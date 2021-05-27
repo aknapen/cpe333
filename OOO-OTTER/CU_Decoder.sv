@@ -21,15 +21,23 @@
 //`include "opcodes.svh"
 
 module OTTER_CU_Decoder(
-    input [6:0] CU_OPCODE,
-    input [2:0] CU_FUNC3,
-    input [6:0] CU_FUNC7,
+    input [6:0] CU_OPCODE_0, 
+    input [6:0] CU_OPCODE_1,
+    input [2:0] CU_FUNC3_0, 
+    input [2:0] CU_FUNC3_1,
+    input [6:0] CU_FUNC7_0,
+    input [6:0] CU_FUNC7_1,
     input intTaken,
-    output logic CU_ALU_SRCA,
-    output logic [1:0] CU_ALU_SRCB,
-    output logic [3:0] CU_ALU_FUN,
-    output logic [1:0] CU_RF_WR_SEL   
+    output logic CU_ALU_SRCA_0,
+    output logic CU_ALU_SRCA_1,
+    output logic [1:0] CU_ALU_SRCB_0, 
+    output logic [1:0] CU_ALU_SRCB_1,
+    output logic [3:0] CU_ALU_FUN_0,
+    output logic [3:0]  CU_ALU_FUN_1,
+    output logic [1:0] CU_RF_WR_SEL_0, 
+    output logic [1:0] CU_RF_WR_SEL_1
    );
+   
         typedef enum logic [6:0] {
                    LUI      = 7'b0110111,
                    AUIPC    = 7'b0010111,
@@ -55,30 +63,72 @@ module OTTER_CU_Decoder(
         } funct3_system_t;
 
        
-        opcode_t OPCODE;
-        assign OPCODE = opcode_t'(CU_OPCODE);
+        opcode_t OPCODE_0, OPCODE_1;
+        assign OPCODE_0 = opcode_t'(CU_OPCODE_0);
+        assign OPCODE_1 = opcode_t'(CU_OPCODE_1);
         
        //DECODING  (does not depend on state)  ////////////////////////////////////////////
        //SEPERATE DECODER
-        always_comb
+       
+        always_comb // instruction 0 decoding
         begin
-            case(CU_OPCODE)
-                OP_IMM: CU_ALU_FUN= (CU_FUNC3==3'b101)?{CU_FUNC7[5],CU_FUNC3}:{1'b0,CU_FUNC3};
-                LUI,SYSTEM: CU_ALU_FUN = 4'b1001;
-                OP: CU_ALU_FUN = {CU_FUNC7[5],CU_FUNC3};
-                default: CU_ALU_FUN = 4'b0;
+            case(CU_OPCODE_0)
+                OP_IMM: CU_ALU_FUN_0= (CU_FUNC3_0==3'b101)?{CU_FUNC7_0[5],CU_FUNC3_0}:{1'b0,CU_FUNC3_0};
+                LUI,SYSTEM: CU_ALU_FUN_0 = 4'b1001;
+                OP: CU_ALU_FUN_0 = {CU_FUNC7_0[5],CU_FUNC3_0};
+                default: CU_ALU_FUN_0 = 4'b0;
             endcase
-         end
-           
-         always_comb
+        end
+        
+        always_comb
          begin
             //if(state==1 || state==2)
-                case(CU_OPCODE)
-                    JAL:    CU_RF_WR_SEL=0;
-                    JALR:    CU_RF_WR_SEL=0;
-                    LOAD:    CU_RF_WR_SEL=2;
-                    SYSTEM:  CU_RF_WR_SEL=1;
-                    default: CU_RF_WR_SEL=3; 
+                case(CU_OPCODE_0)
+                    JAL:    CU_RF_WR_SEL_0=0;
+                    JALR:    CU_RF_WR_SEL_0=0;
+                    LOAD:    CU_RF_WR_SEL_0=2;
+                    SYSTEM:  CU_RF_WR_SEL_0=1;
+                    default: CU_RF_WR_SEL_0=3; 
+                endcase
+            //else CU_RF_WR_SEL=3;   
+          end   
+          
+         always_comb
+         begin
+         // if(state!=0)
+            case(CU_OPCODE_0)
+                STORE:  CU_ALU_SRCB_0=2;  //S-type
+                LOAD:   CU_ALU_SRCB_0=1;  //I-type
+                JAL:    CU_ALU_SRCB_0=1;  //I-type
+                OP_IMM: CU_ALU_SRCB_0=1;  //I-type
+                AUIPC:  CU_ALU_SRCB_0=3;  // U-type (special) LUI does not use B
+                default:CU_ALU_SRCB_0=0;  //R-type    //OP  BRANCH-does not use
+            endcase
+          //else CU_ALU_SRCB=3;
+         end
+           
+       assign CU_ALU_SRCA_0 = (CU_OPCODE_0==LUI || CU_OPCODE_0==AUIPC) ? 1 : 0;
+       
+        
+        always_comb // instruction 1 decoding
+        begin
+            case(CU_OPCODE_1)
+                OP_IMM: CU_ALU_FUN_1= (CU_FUNC3_1==3'b101)?{CU_FUNC7_1[5],CU_FUNC3_1}:{1'b0,CU_FUNC3_1};
+                LUI,SYSTEM: CU_ALU_FUN_1 = 4'b1001;
+                OP: CU_ALU_FUN_1 = {CU_FUNC7_1[5],CU_FUNC3_1};
+                default: CU_ALU_FUN_1 = 4'b0;
+            endcase
+        end
+           
+        always_comb
+         begin
+            //if(state==1 || state==2)
+                case(CU_OPCODE_1)
+                    JAL:    CU_RF_WR_SEL_1=0;
+                    JALR:    CU_RF_WR_SEL_1=0;
+                    LOAD:    CU_RF_WR_SEL_1=2;
+                    SYSTEM:  CU_RF_WR_SEL_1=1;
+                    default: CU_RF_WR_SEL_1=3; 
                 endcase
             //else CU_RF_WR_SEL=3;   
           end   
@@ -87,18 +137,18 @@ module OTTER_CU_Decoder(
          always_comb
          begin
          // if(state!=0)
-            case(CU_OPCODE)
-                STORE:  CU_ALU_SRCB=2;  //S-type
-                LOAD:   CU_ALU_SRCB=1;  //I-type
-                JAL:    CU_ALU_SRCB=1;  //I-type
-                OP_IMM: CU_ALU_SRCB=1;  //I-type
-                AUIPC:  CU_ALU_SRCB=3;  // U-type (special) LUI does not use B
-                default:CU_ALU_SRCB=0;  //R-type    //OP  BRANCH-does not use
+            case(CU_OPCODE_1)
+                STORE:  CU_ALU_SRCB_1=2;  //S-type
+                LOAD:   CU_ALU_SRCB_1=1;  //I-type
+                JAL:    CU_ALU_SRCB_1=1;  //I-type
+                OP_IMM: CU_ALU_SRCB_1=1;  //I-type
+                AUIPC:  CU_ALU_SRCB_1=3;  // U-type (special) LUI does not use B
+                default:CU_ALU_SRCB_1=0;  //R-type    //OP  BRANCH-does not use
             endcase
           //else CU_ALU_SRCB=3;
          end
            
-       assign CU_ALU_SRCA = (CU_OPCODE==LUI || CU_OPCODE==AUIPC) ? 1 : 0;
+       assign CU_ALU_SRCA_1 = (CU_OPCODE_1==LUI || CU_OPCODE_1==AUIPC) ? 1 : 0;
                 
         //assign CU_MSIZE = CU_FUNC3[1:0];        
 

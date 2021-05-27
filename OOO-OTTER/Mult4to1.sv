@@ -75,3 +75,22 @@ module Mult2to1(In1, In2, Sel, Out);
             default: Out <= In2; 
         endcase
 endmodule
+
+module MultPC(next_pc_0, next_pc_1, jalr_pc, branch_pc, jump_pc, pc_source, pc_in_0, pc_in_1);
+    input [31:0] next_pc_0, next_pc_1, jalr_pc, branch_pc, jump_pc; //32-bit inputs 
+    input [1:0] pc_source; //selector signal
+    output logic [31:0] pc_in_0, pc_in_1; //64-bit output
+    
+    always_comb
+    begin
+        pc_in_0 = 0; 
+        pc_in_1 = 0;
+        case (pc_source)
+            0: begin pc_in_0 = next_pc_0; pc_in_1 = next_pc_1; end
+            1: pc_in_0 = jalr_pc;
+            2: pc_in_0 = branch_pc;
+            3: pc_in_0 = jump_pc;
+            default: begin pc_in_0 = next_pc_0; pc_in_1 = next_pc_1; end
+        endcase
+    end
+endmodule

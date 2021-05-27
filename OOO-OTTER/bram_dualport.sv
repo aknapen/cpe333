@@ -251,12 +251,12 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
  endmodule
 */
  // NEW MEMORY MODULE                                                                                                                               //func3
- module OTTER_mem_byte(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_READ1,MEM_READ2,ERR,MEM_DOUT1,MEM_DOUT2,LD_HAZ,IO_IN,IO_WR,MEM_SIZE,MEM_SIGN);
+ module OTTER_mem_byte(MEM_CLK,MEM_ADDR1_0,MEM_ADDR1_1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_READ1,MEM_READ2,ERR,MEM_DOUT1_0,MEM_DOUT1_1,MEM_DOUT2,LD_HAZ,IO_IN,IO_WR,MEM_SIZE,MEM_SIGN);
     parameter ACTUAL_WIDTH=14;  //32KB     16K x 32
     parameter NUM_COL = 4;
     parameter COL_WIDTH = 8;
     
-    input [31:0] MEM_ADDR1;     //Instruction Memory Port
+    input [31:0] MEM_ADDR1_0, MEM_ADDR1_1;     //Instruction Memory Port
     input [31:0] MEM_ADDR2;     //Data Memory Port
     input MEM_CLK;
     input [31:0] MEM_DIN2;
@@ -270,7 +270,7 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
     output ERR;
     input [1:0] MEM_SIZE;
     input MEM_SIGN;
-    output logic [31:0] MEM_DOUT1;
+    output logic [31:0] MEM_DOUT1_0, MEM_DOUT1_1;
     output logic [31:0] MEM_DOUT2;
     output logic IO_WR;
     
@@ -278,13 +278,14 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
     logic [1:0] saved_mem_size;
     logic [31:0] saved_mem_addr2;
     
-    wire [ACTUAL_WIDTH-1:0] memAddr1,memAddr2;
+    wire [ACTUAL_WIDTH-1:0] memAddr1_0, memAddr1_1,memAddr2;
     logic memWrite2;  
     logic [31:0] memOut2;
     logic [31:0] ioIn_buffer=0;
     logic [NUM_COL-1:0] weA;
    
-     assign memAddr1 =MEM_ADDR1[ACTUAL_WIDTH+1:2];
+    assign memAddr1_0 =MEM_ADDR1_0[ACTUAL_WIDTH+1:2];
+    assign memAddr1_1 =MEM_ADDR1_1[ACTUAL_WIDTH+1:2];
     assign memAddr2 =MEM_ADDR2[ACTUAL_WIDTH+1:2];
     
     (* rom_style="{distributed | block}" *) 
@@ -328,7 +329,10 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
             memOut2 <= memory[memAddr2]; 
         //PORT 1  //Instructions
         if(MEM_READ1)
-            MEM_DOUT1 <= memory[memAddr1];
+        begin
+            MEM_DOUT1_0 <= memory[memAddr1_0];
+            MEM_DOUT1_1 <= memory[memAddr1_1];
+        end
 //        begin
 //            case (LD_HAZ)
 //                0: MEM_DOUT1 <= memory[memAddr1];  
@@ -342,8 +346,8 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
     end
     
     //Check for misalligned or out of bounds memory accesses
-    assign ERR = ((MEM_ADDR1 >= 2**ACTUAL_WIDTH)|| (MEM_ADDR2 >= 2**ACTUAL_WIDTH)
-                    || MEM_ADDR1[1:0] != 2'b0 || MEM_ADDR2[1:0] !=2'b0)? 1 : 0; 
+    assign ERR = ((MEM_ADDR1_0 >= 2**ACTUAL_WIDTH)|| (MEM_ADDR2 >= 2**ACTUAL_WIDTH)
+                    || MEM_ADDR1_0[1:0] != 2'b0 || MEM_ADDR2[1:0] !=2'b0)? 1 : 0; 
             
     
     always_ff @(posedge MEM_CLK)

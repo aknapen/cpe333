@@ -55,6 +55,21 @@
            logic invalid;
            logic br_taken;
        } instr_t;
+       
+       typedef struct packed {
+           logic [31:0] A;
+           logic [31:0] B;
+           opcode_t opcode;
+           logic [4:0] rd_addr;
+           logic rd_used;
+           logic [4:0] rs1_addr;
+           logic rs1_used;
+           logic [4:0] rs2_addr;
+           logic rs2_used;
+           logic [3:0] alu_fun;
+           logic [2:0] mem_type;
+           logic [1:0] wb_sel;
+       } task_t;
 
    endpackage
 
@@ -96,7 +111,7 @@ module OTTER_MCU(input CLK,
     instr_t EX_MEM_instr;
     instr_t MEM_WB_instr;
         
-    logic [31:0] IF_ID_pc; // transmits the PC between the IF and ID stages
+    logic [31:0] IF_ID_pc_0, IF_ID_pc_1; // transmits the PC between the IF and ID stages
     logic [31:0] WB_rfIn; // connect to din for the reg file
     logic jb_taken; // indicates if a jump or branch has been taken
     
@@ -111,11 +126,11 @@ module OTTER_MCU(input CLK,
 
     // Inputs to IF module
     logic [31:0] jalr_pc, branch_pc, jump_pc; 
-    logic [2:0] pc_source;
+    logic [1:0] pc_source;
     logic ld_haz; // used to detect a load-use hazard
 
     // Outputs from IF module
-    logic [31:0] fetch_pc;
+    logic [31:0] fetch_pc_0, fetch_pc_1;
     logic memRead1;
 
     InstructionFetch IF(.*); 
@@ -125,18 +140,20 @@ module OTTER_MCU(input CLK,
     // PC REGISTER
     always_ff @(posedge CLK) // transfers PC from fetch to decode
     begin
-        IF_ID_pc <= fetch_pc; // delay PC from fetch stage
+        IF_ID_pc_0 <= fetch_pc_0; // delay PC from fetch stage
+        IF_ID_pc_1 <= fetch_pc_1;
     end
     
     
 //======================= BEGIN DECODE STAGE ===========================//
 
-    logic [31:0] IR;
+    logic [31:0] IR_0, IR_1;
     logic [31:0] DE_A, DE_B; // ALU  A and B that will be sent to the Execute Stage
     logic [31:0] rs2; // Need this later for mem
     logic [31:0] I_immed;
     instr_t instr;
     
+    task_t TASK_0, TASK_1;
     InstructionDecode ID(.*);
 
 
@@ -147,7 +164,7 @@ module OTTER_MCU(input CLK,
         begin
             EX_A <= DE_A;
             EX_B <= DE_B;
-            EX_IR <= IR;
+            EX_IR <= IR_0;
             EX_RS2 <= rs2; // Need this later for mem
             EX_I_immed <= I_immed;
             DE_EX_instr <= instr; // push instruction from decode to execute stage
@@ -156,7 +173,7 @@ module OTTER_MCU(input CLK,
 //======================= BEGIN EXECUTE STAGE ===========================//
 
     logic [31:0] aluResult, MEM_RS2;
-    logic int_pc;
+    logic [31:0] int_pc;
     
     Execute EX(.*);    
 

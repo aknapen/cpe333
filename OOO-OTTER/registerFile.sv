@@ -20,22 +20,31 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module OTTER_registerFile(Read1,Read2,WriteReg,WriteData,RegWrite,Data1,Data2,clock);
-    input [4:0] Read1,Read2,WriteReg; //the register numbers to read or write
+module OTTER_registerFile(Read1_0, Read1_1,Read2_0,Read2_1,WriteReg,WriteData,RegWrite,Data1_0, Data1_1,Data2_0,Data2_1,clock);
+    input [4:0] Read1_0, Read1_1,Read2_0, Read2_1,WriteReg; //the register numbers to read or write
     input [31:0] WriteData; //data to write
     input RegWrite, //the write control
         clock;  // the clock to trigger write
-    output logic [31:0] Data1, Data2; // the register values read
+    output logic [31:0] Data1_0, Data1_1, Data2_0, Data2_1; // the register values read
     logic [31:0] RF [31:0]; //32 registers each 32 bits long
     
-    //assign Data1 = RF[Read1];
-    //assign Data2 = RF[Read2];
-    always_comb
-        if(Read1==0) Data1 =0;
-        else Data1 = RF[Read1];
-    always_comb
-        if(Read2==0) Data2 =0;
-        else Data2 = RF[Read2];
+    always_comb // read in rs1 values
+    begin
+        if(Read1_0==0) Data1_0 = 0;
+        else Data1_0 = RF[Read1_0];
+        
+        if(Read1_1==0) Data1_1 = 0;
+        else Data1_1 = RF[Read1_1];
+    end
+    
+    always_comb // read in rs2 values
+    begin
+        if(Read2_0==0) Data2_0 =0;
+        else Data2_0 = RF[Read2_0];
+        
+        if(Read2_1==0) Data2_1 =0;
+        else Data2_1 = RF[Read2_1];
+    end
     
     always@(negedge clock) begin // write the register with the new value if Regwrite is high
         if(RegWrite && WriteReg!=0) RF[WriteReg] <= WriteData;
