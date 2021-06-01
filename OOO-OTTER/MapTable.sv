@@ -18,28 +18,52 @@
 // Additional Comments:
 // 
 //////////////////////////////////////////////////////////////////////////////////
-
-
-module MapTable(Read1,Read2,WriteReg,WriteData,RegWrite,Data1,Data2,clock);
-    input [4:0] Read1,Read2,WriteReg; //the register numbers to read or write
-    input [31:0] WriteData; //data to write
-    input RegWrite, //the write control
-        clock;  // the clock to trigger write
-    output logic [31:0] Data1, Data2; // the register values read
-    logic [31:0] RF [31:0]; //32 registers each 32 bits long
+import cpu_types::*;
     
-    //assign Data1 = RF[Read1];
-    //assign Data2 = RF[Read2];
-    always_comb
-        if(Read1==0) Data1 =0;
-        else Data1 = RF[Read1];
-    always_comb
-        if(Read2==0) Data2 =0;
-        else Data2 = RF[Read2];
+
+module MapTable(
+    input CLK,
+    input opcode_t task_opcode,
+    input rs1_used, rs2_used,
+    input [4:0] rs1_addr, rs2_addr, rd_addr, // assign issue_tag to rd_addr in map table, possibly replace rs1/rs2 vals with tags
+    input RS_tag_type CDB_tag, // tag broadcast on the CDB
+    input [31:0] CDB_val, // value broadcast on the CDB
+    input RS_tag_type issue_tag, // RS of issued task
     
-    always@(negedge clock) begin // write the register with the new value if Regwrite is high
-        if(RegWrite && WriteReg!=0) RF[WriteReg] <= WriteData;
+    output RS_tag_type T1, T2, T3, // tags for the RS, T3 holds rs2 data tag for stores
+    output [31:0] reg_data, // data to write to reg file
+    output reg_valid // enable for writing to reg file
+);
         
+    MTEntry_type map_table [31:0];
+    
+    always_ff @(posedge CLK) // map destination register of issued task in map table
+    begin
+        map_table[rd_addr].tag <= issue_tag;
+        map_table[rd_addr].busy <= 1;
     end
- endmodule
+    
+    always_comb // send V1,V2 tags if needed
+    begin
+        T1 = INVALID; T2 = INVALID; T3 = INVALID;
+        if (map_table[rs1_addr].busy && rs1_used) T1 = map_table[rs1_addr].tag;
+        if (map_table[rs2_addr].busy &&  task_opcode != STORE && task_opcode != LOAD) T2 = map_table[rs2_addr].tag; // T2 will always be invalid for a STORE since we used immed as operand
+        if (map_table[rs2_addr].busy && task_opcode == STORE) T3 = map_table[rs2_addr].tag;
+    end
+    
+    // Comparator to send data to reg file
+    always_ff @(posedge CLK)
+    begin
+        for (int i =0; i < 32; i++)
+        begin
+            if (map_table[i].tag == CDB_tag) 
+            begin
+                reg_data = CDB_val;
+                map_table[i].busy = 0; // free up register after it's been written to
+                map_table[i].tag = INVALID;
+            end    
+        end    
+    end 
+       
+endmodule
 

@@ -78,6 +78,7 @@ module InstructionDecode(
                            (opcode_0 != NOP) &&
                            (opcode_0 != JAL)) ? 1 : 0;
         task_0.rs2_addr = IR_0[24:20];
+        task_0.rs2_data = rs2_0;
         task_0.rs2_used = ((opcode_0 == BRANCH) || // only BRANCH, STORE, and OP instruction use rs2
                            (opcode_0 == STORE) ||
                            (opcode_0 == OP)) ? 1 : 0;
@@ -101,6 +102,7 @@ module InstructionDecode(
                            (opcode_1 != NOP) &&
                            (opcode_1 != JAL)) ? 1 : 0;
         task_1.rs2_addr = IR_1[24:20];
+        task_1.rs2_data = rs2_1;
         task_1.rs2_used = ((opcode_1 == BRANCH) || // only BRANCH, STORE, and OP instruction use rs2
                            (opcode_1 == STORE) ||
                            (opcode_1 == OP)) ? 1 : 0;

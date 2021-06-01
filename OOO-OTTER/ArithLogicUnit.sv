@@ -19,14 +19,30 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
-module OTTER_ALU(ALU_fun, A, B, ALUOut);
-        input [3:0] ALU_fun;  //func7[5],func3
-        input [31:0] A,B;
-        output logic [31:0] ALUOut; 
-       
-        always_comb
-        begin //reevaluate If these change
-            case(ALU_fun)
+module OTTER_ALU(
+    input [31:0] V1, V2,
+    input V1_valid, V2_valid,
+    input [3:0] alu_fun,
+    input RS_tag_type rd_tag,
+    input opcode_t OPCODE,
+    input CDB_busy,
+    
+    output [31:0] CDB_val,
+    output RS_tag_type CDB_tag,
+    output done
+);       
+    // intermediates
+    logic [31:0] ALUOut, cdb_val;
+    RS_tag_type cdb_tag;
+    logic complete;
+  
+    initial begin complete = 1; end
+    
+    always_comb
+    begin //reevaluate If these change
+        if (V1_valid && V2_valid)
+        begin
+            case(alu_fun)
                 0:  ALUOut = A + B;     //add
                 8:  ALUOut = A - B;     //sub
                 6:  ALUOut = A | B;     //or
@@ -42,6 +58,25 @@ module OTTER_ALU(ALU_fun, A, B, ALUOut);
                 default: ALUOut = 0; 
             endcase
         end
-    endmodule
+    end
+    
+    // Broadcast result on the CDB
+    always_comb
+    begin
+        cdb_tag = INVALID; // don't want to add to commit queue until ready
+        complete = 0;
+        if (!CDB_busy && V1_valid && V2_valid)
+        begin
+            cdb_val = ALUOut;
+            cdb_tag = rd_tag;
+            complete = 1;
+        end
+    end
+    
+    assign CDB_val = cdb_val;
+    assign CDB_tag = cdb_tag;
+    assign done = complete;
+    
+endmodule
    
   

@@ -1,26 +1,26 @@
 import cpu_types::*;
 
-module ReservationStation(
-   input MapTable MT, 
-//   input RS_tag_type T1, T2, // register tags from MAP table 
-   input RS_tag_type id, // tag of current reservation staion (self-identifier)
+module ReservationStation #(parameter RS_TAG = INVALID) (
    input task_t DISPATCH_TASK,
-   input RS_tag_type dest_res, // Reservation Station Selector
+   input RS_tag_type dest_RS, // Reservation Station Selector
+   input RS_tag_type T1, T2, T3, // register tags from MAP table
    input RS_tag_type CDB_tag, // tag from CDB
    input [31:0] CDB_val, // value from CDB
-   input logic done, // FU tells RS when it's done
+   input done, // FU tells RS when it's done
    
-   output logic BUSY, // tell issue queue if RS is busy
-   output logic [31:0] V1, V2, // value of operands for FU
-   output logic V1_valid, V2_valid, // tell FU if operands are 
-   output logic [4:0] rd_addr, // specify to FU where register result needs to go to
-   output opcode_t OPCODE
+   output BUSY, // tell issue queue if RS is busy
+   output [31:0] V1, V2, V3, // value of operands for FU
+   output V1_valid, V2_valid, V3_valid, // tell FU if operands are 
+   output RS_tag_type rd_tag, // specify to FU where register result needs to go to
+   output [31:0] rs2_data, // need to send rs2 data to the store unit
+   output [2:0] mem_type,
+   output alu_fun // output function to ALU
 );
     
+    // intermediate outputs
     logic busy;
-    RS_tag_type T1, T2;
-    logic [31:0] v1, v2;
-    RS_tag_type RD_tag;
+    logic [31:0] v1, v2, v3;
+    logic v1_valid, v2_valid, v3_valid;
     task_t curr_task;
     
     always_comb // Busy Calculation
@@ -31,60 +31,65 @@ module ReservationStation(
 
     always_comb // Task Selection Calculation
     begin
-        if (id == dest_res) curr_task = DISPATCH_TASK;
-        if(done) curr_task = INVALID; // Need a way to clear the reservation station
+        if (RS_TAG == dest_RS) curr_task = DISPATCH_TASK;
     end
     
-    always_comb
+    always_comb // setting V1
     begin
-        RD_tag = MapTable[curr_task.rd].tag; // Don't know the syntax yet for accessing the maptable
-        
+        v1_valid = 0;        
         // Maps the initial value of V1 based on whether or not RS1 is in the Map Table
-        if (MapTable[curr_task.rs1] == 0) // If the RS1 is not mapped in the Map Table go to Reg file or Immediate
+        if (T1 == INVALID) // If the RS1 is not mapped in the Map Table go to Reg file or Immediate
         begin
-            T1 = INVALID;
-            V1_valid = 1;
-            reg_rs1 = reg_file[rs1] // Don't know the syntax for getting this
-            v1 = (curr_task.rs1_uder) ? reg_rs2 : curr_task.uimmediate;
+            v1_valid = 1; // use input value A from incoming task
+            v1 = curr_task.A;
         end
-        else
+        else if(CDB_tag == T1)
         begin
-            V1_valid = 0;
-            t1 = MapTable[curr_task.rs1]
-        end
-        
-        // Maps the initial value of V2 based on whether or not RS2 is in the Map Table
-        if (MapTable[curr_task.rs2] == 0) // If the RS2 is not mapped in the Map Table go to Reg file or Immediate
-        begin
-            T2 = INVALID; // So we don't catch broadcast we don't want
-            V2_valid = 1; // We got a valid value from the reg file
-            reg_rs1 = reg_file[rs2] // Don't know the syntax for getting this
-            v2 = (curr_task.rs2_used) ? reg_rs2 : curr_task.uimmediate; // Not sure about this one
-        end
-        else // If RS2 is in the map table we set T2 alias and make sure V2 is invalid
-        begin
-            V2_valid = 0;
-            t2 = MapTable[curr_task.rs2]
-        end
-        
-        
-        if(CDB_tag == T1)
-        begin
-            V1_valid = 1;
+            v1_valid = 1;
             v1 = CDB_value;
-        end 
-        
-        if(CDB_tag == T2)
+        end
+    end
+    
+    always_comb // setting V2
+    begin
+        v2_valid = 0;        
+        // Maps the initial value of V2 based on whether or not RS2 is in the Map Table
+        if (T2 == INVALID) // If the RS2 is not mapped in the Map Table go to Reg file or Immediate
         begin
-            V2_valid = 1;
+            v2_valid = 1; // use input value B from incoming task
+            v2 = curr_task.B;
+        end
+        else if(CDB_tag == T2)
+        begin
+            v2_valid = 1;
             v2 = CDB_value;
-        end 
-        
+        end
+    end
+    
+    always_comb // setting V3
+    begin
+        v3_valid = 0;        
+        // Maps the initial value of V2 based on whether or not RS2 is in the Map Table
+        if (T3 == INVALID) // If the RS2 is not mapped in the Map Table go to Reg file or Immediate
+        begin
+            v3_valid = 1; // use input value B from incoming task
+            v3 = curr_task.rs2_data;
+        end
+        else if(CDB_tag == T3)
+        begin
+            v3_valid = 1;
+            v3 = CDB_value;
+        end
     end
     
     assign V1 = v1;
+    assign V1_valid = v1_valid;
     assign V2 = v2;
+    assign V2_valid = v2_valid;
+    
     assign BUSY = busy;
     assign OPCODE = curr_task.opcode;
-    
+    assign alu_fun = curr_task.alu_fun; // ALU FU needs alu fun
+    assing rs2_data = curr_task.rs2_data; // STORE FU needs RS2 data
+    assign mem_type = curr_task.mem_type; // STORE/LOAD FUs need mem_type
 endmodule
