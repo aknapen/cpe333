@@ -42,10 +42,20 @@ module MapTable(
     logic [4:0] writeReg_addr_inter;
     logic reg_valid_inter;
     
+    initial begin
+        for (int i =0; i<32; i++)
+        begin
+            map_table[i].tag = INVALID;
+            map_table[i].busy = 0;
+        end
+        
+        
+    end
+    
     always_ff @(posedge CLK) // map destination register of issued task in map table
     begin
-        map_table[rd_addr].tag <= issue_tag;
-        map_table[rd_addr].busy <= 1;
+        map_table[rd_addr].tag = issue_tag;
+        map_table[rd_addr].busy = 1;
     end
     
     always_comb // send V1,V2 tags if needed

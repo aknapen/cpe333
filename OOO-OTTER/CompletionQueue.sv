@@ -40,15 +40,17 @@ module CompletionQueue( // Store does not broadcast to the CDB
     
     always_ff @(posedge CLK) // add to completion queue
     begin
-        if (TAG_IN1 != INVALID) completion_queue.push_front({TAG_IN1, DATA_IN1});
-        if (TAG_IN2 != INVALID) completion_queue.push_front({TAG_IN2, DATA_IN2});
-        if (TAG_IN3 != INVALID) completion_queue.push_front({TAG_IN3, DATA_IN3});
-        if (TAG_IN4 != INVALID) completion_queue.push_front({TAG_IN4, DATA_IN4});
+        if (TAG_IN1 != INVALID) completion_queue.push_back({TAG_IN1, DATA_IN1});
+        if (TAG_IN2 != INVALID) completion_queue.push_back({TAG_IN2, DATA_IN2});
+        if (TAG_IN3 != INVALID) completion_queue.push_back({TAG_IN3, DATA_IN3});
+        if (TAG_IN4 != INVALID) completion_queue.push_back({TAG_IN4, DATA_IN4});
     end
     
     always_ff @(posedge CLK) // broadcast to CDB
     begin
         if (completion_queue.size() != 0) cdb_out = completion_queue.pop_front();  
     end
+    
+    assign CDB_OUT = cdb_out;
     
 endmodule

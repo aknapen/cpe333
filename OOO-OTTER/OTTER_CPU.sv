@@ -195,8 +195,8 @@ module OTTER_MCU(input CLK,
     // Map Table
     MapTable MT(.task_opcode(DISPATCH_TASK.opcode), .rs1_used(DISPATCH_TASK.rs1_used), .rs2_used(DISPATCH_TASK.rs2_used),
                 .rs1_addr(DISPATCH_TASK.rs1_addr), .rs2_addr(DISPATCH_TASK.rs2_addr), .rd_addr(DISPATCH_TASK.rd_addr),
-                .cdb_in(cdb_data), .issue_tag(dest_rs), .T1(t1), .T2(t2), .T3(t3), .reg_data(WB_rfIn), .writeReg_addr(regWrite_addr),
-                .reg_valid(regWrite)); // Maps Register -> Reservation Station
+                .cdb_in(cdb_data), .issue_tag(dest_rs), .T1(T1), .T2(T2), .T3(T3), .reg_data(WB_rfIn), .writeReg_addr(regWrite_addr),
+                .reg_valid(regWrite), .CLK(CLK)); // Maps Register -> Reservation Station
     
     
     // Reservation Stations / Functional Units
@@ -352,8 +352,8 @@ module OTTER_MCU(input CLK,
                    .done(ALU2_done));
     
  
-    assign rs_busy = {L1_busy, L2_busy, S1_busy, S2_busy, ALU1_busy, ALU2_busy}; // concatenate each RS's busy bits
-    
+//    assign rs_busy = {S1_busy, S2_busy, L1_busy, L2_busy , ALU1_busy, ALU2_busy}; // concatenate each RS's busy bits
+    assign rs_busy = {ALU2_busy, ALU1_busy, L2_busy, L1_busy, S2_busy, S1_busy};
     
     // Completion Queue
     CompletionQueue Completion(.CLK(CLK), .TAG_IN1(L1_CDB_tag), .DATA_IN1(L1_CDB_val), .TAG_IN2(L2_CDB_tag), .DATA_IN2(L2_CDB_val), 

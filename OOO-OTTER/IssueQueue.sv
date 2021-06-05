@@ -46,8 +46,8 @@ module IssueQueue(
         if (task_queue.size() == 15) full = 1;
         else
         begin // insert new tasks into issue queue
-            task_queue.push_front(TASK_0);
-            task_queue.push_front(TASK_1);
+            task_queue.push_back(TASK_0);
+            task_queue.push_back(TASK_1);
         end
     end
     

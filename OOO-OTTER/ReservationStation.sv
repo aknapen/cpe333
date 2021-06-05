@@ -15,7 +15,7 @@ module ReservationStation #(parameter RS_TAG = INVALID) (
    output RS_tag_type rd_tag, // specify to FU where register result needs to go to
 //   output [31:0] rs2_data, // need to send rs2 data to the store unit
    output [2:0] mem_type,
-   output alu_fun // output function to ALU
+   output [3:0] alu_fun // output function to ALU
 );
     
     // intermediate outputs
@@ -24,15 +24,27 @@ module ReservationStation #(parameter RS_TAG = INVALID) (
     logic v1_valid, v2_valid, v3_valid;
     task_t curr_task;
     
-    always_comb // Busy Calculation
-    begin
-        busy = 0;
-        if (!done) busy = 1; // signal to issue queue that RS is ready
-    end
-
+//    always_comb // Busy Calculation
+//    begin
+//        busy = 0;
+//        if (!done) busy = 1; // signal to issue queue that RS is ready
+//    end
+    
     always_comb // Task Selection Calculation
     begin
-        if (RS_TAG == dest_RS) curr_task = DISPATCH_TASK;
+    
+        if (done)
+        begin
+            busy = 0;
+        end
+        
+        if (RS_TAG == dest_RS)
+        begin
+            curr_task = DISPATCH_TASK;
+            busy = 1;
+        end
+        
+        
     end
     
     always_comb // setting V1
