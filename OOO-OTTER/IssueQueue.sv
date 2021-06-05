@@ -31,13 +31,19 @@ module IssueQueue(
     output FULL
     );
     
-    task_type task_queue [$:15];
+    task_t task_queue [$:15];
     task_t dispatch_task;
     logic full;
+    logic stall; 
     logic [5:0] busy;
     RS_tag_type rs;
     
     assign busy = rs_busy;
+    
+    initial 
+    begin
+        stall = 0;
+    end
     
     always_ff @(posedge CLK) // Issue Stage
     begin
@@ -56,8 +62,8 @@ module IssueQueue(
         case (task_queue[0].opcode) // peak top of queue
             STORE:
             begin // assign to available store RS or stall
-                if (!busy[0]) rs = STORE_0;
-                else if (!busy[1]) rs = STORE_1;
+                if (!busy[0]) rs = STORE_1;
+                else if (!busy[1]) rs = STORE_2;
                 else stall = 1;
             end
             
@@ -70,8 +76,8 @@ module IssueQueue(
            
             default:
             begin // assign to available ALU RS or stall
-                if (!busy[4]) rs = ALU_0;
-                else if (!busy[5]) rs = ALU_1;
+                if (!busy[4]) rs = ALU_1;
+                else if (!busy[5]) rs = ALU_2;
                 else stall = 1;
             end
         endcase

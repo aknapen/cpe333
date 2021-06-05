@@ -67,6 +67,7 @@
            logic rs1_used;
            logic [4:0] rs2_addr;
            logic rs2_used;
+           logic [31:0] rs2_data;
            logic [3:0] alu_fun;
            logic [2:0] mem_type;
            logic [1:0] wb_sel;
@@ -204,13 +205,13 @@ module OTTER_MCU(input CLK,
     logic L1_done, L1_busy, L1_V1_valid, L1_V2_valid, L1_V3_valid;
     logic [31:0] L1_V1, L1_V2, L1_V3;
     logic [4:0] L1_rd_tag;
-    logic [31:0] L1_rs2_data;
+//    logic [31:0] L1_rs2_data;
     logic [2:0] L1_mem_type;
     logic [3:0] L1_alu_fun;
     ReservationStation #(LOAD_1) RS_Load1 (.DISPATCH_TASK(DISPATCH_TASK), .dest_RS(dest_rs), .T1(T1), .T2(T2), .T3(T3),
                                            .cdb_in(cdb_data), .done(L1_done), .BUSY(L1_busy), .V1(L1_V1),
                                            .V2(L1_V2), .V3(L1_V3), .V1_valid(L1_V1_valid), .V2_valid(L1_V2_valid), .V3_valid(L1_V3_valid),
-                                           .rd_tag(L1_rd_tag), .rs2_data(L1_rs2_data), .mem_type(L1_mem_type), .alu_fun(L1_alu_fun));
+                                           .rd_tag(L1_rd_tag), .mem_type(L1_mem_type), .alu_fun(L1_alu_fun));
     logic [31:0] L1_mem_data_in;
     RS_tag_type L1_CDB_tag;
     logic [31:0] L1_CDB_val;
@@ -227,13 +228,13 @@ module OTTER_MCU(input CLK,
     logic L2_done, L2_busy, L2_V1_valid, L2_V2_valid, L2_V3_valid;
     logic [31:0] L2_V1, L2_V2, L2_V3;
     logic [4:0] L2_rd_tag;
-    logic [31:0] L2_rs2_data;
+//    logic [31:0] L2_rs2_data;
     logic [2:0] L2_mem_type;
     logic [3:0] L2_alu_fun;
     ReservationStation #(LOAD_2) RS_Load2(.DISPATCH_TASK(DISPATCH_TASK), .dest_RS(dest_rs), .T1(T1), .T2(T2), .T3(T3),
                                            .cdb_in(cdb_data), .done(L2_done), .BUSY(L2_busy), .V1(L2_V1),
                                            .V2(L2_V2), .V3(L2_V3), .V1_valid(L2_V1_valid), .V2_valid(L2_V2_valid), .V3_valid(L2_V3_valid),
-                                           .rd_tag(L2_rd_tag), .rs2_data(L2_rs2_data), .mem_type(L2_mem_type), .alu_fun(L2_alu_fun));
+                                           .rd_tag(L2_rd_tag), .mem_type(L2_mem_type), .alu_fun(L2_alu_fun));
                                            
     logic [31:0] L2_mem_data_in;
     RS_tag_type L2_CDB_tag;
@@ -251,20 +252,20 @@ module OTTER_MCU(input CLK,
     logic S1_done, S1_busy, S1_V1_valid, S1_V2_valid, S1_V3_valid;
     logic [31:0] S1_V1, S1_V2, S1_V3;
     logic [4:0] S1_rd_tag;
-    logic [31:0] S1_rs2_data;
+//    logic [31:0] S1_rs2_data;
     logic [2:0] S1_mem_type;
     logic [3:0] S1_alu_fun;
     ReservationStation #(STORE_1) RS_Store1(.DISPATCH_TASK(DISPATCH_TASK), .dest_RS(dest_rs), .T1(T1), .T2(T2), .T3(T3),
                                            .cdb_in(cdb_data), .done(S1_done), .BUSY(S1_busy), .V1(S1_V1),
                                            .V2(S1_V2), .V3(S1_V3), .V1_valid(S1_V1_valid), .V2_valid(S1_V2_valid), .V3_valid(S1_V3_valid),
-                                           .rd_tag(S1_rd_tag), .rs2_data(S1_rs2_data), .mem_type(S1_mem_type), .alu_fun(S1_alu_fun));
+                                           .rd_tag(S1_rd_tag), .mem_type(S1_mem_type), .alu_fun(S1_alu_fun));
     
     logic [4:0] S1_mem_addr_2;
     logic S1_mem_write;
     logic [31:0] S1_mem_write_data;
     logic S1_mem_sign;
     logic [1:0] S1_mem_size;
-    StoreUnit Store1(.V1(S1_V1), .V2(S1_V2), .V3(S1_V3), .V1_valid(S1_V1_valid), .V2_valid(S1_V2_valid), .V3_Valid(S1_V3_valid), .rd_tag(S1_rd_tag), 
+    StoreUnit Store1(.V1(S1_V1), .V2(S1_V2), .V3(S1_V3), .V1_valid(S1_V1_valid), .V2_valid(S1_V2_valid), .V3_valid(S1_V3_valid), .rd_tag(S1_rd_tag), 
                      .mem_type(S1_mem_type), .mem_resp(S1_mem_resp), .mem_resp_valid(S1_mem_resp_valid), .done(S1_done), .MEM_ADDR2(S1_mem_addr_2),
                      .MEM_WRITE(S1_mem_write), .MEM_WRITE_DATA(S1_mem_write_data), .MEM_SIGN(S1_mem_sign), .MEM_SIZE(S1_mem_size));
     
@@ -273,20 +274,20 @@ module OTTER_MCU(input CLK,
     logic S2_done, S2_busy, S2_V1_valid, S2_V2_valid, S2_V3_valid;
     logic [31:0] S2_V1, S2_V2, S2_V3;
     logic [4:0] S2_rd_tag;
-    logic [31:0] S2_rs2_data;
+//    logic [31:0] S2_rs2_data;
     logic [2:0] S2_mem_type;
     logic [3:0] S2_alu_fun;
     ReservationStation #(STORE_2) RS_Store2(.DISPATCH_TASK(DISPATCH_TASK), .dest_RS(dest_rs), .T1(T1), .T2(T2), .T3(T3),
                                            .cdb_in(cdb_data), .done(S2_done), .BUSY(S2_busy), .V1(S2_V1),
                                            .V2(S2_V2), .V3(S2_V3), .V1_valid(S2_V1_valid), .V2_valid(S2_V2_valid), .V3_valid(S2_V3_valid),
-                                           .rd_tag(S2_rd_tag), .rs2_data(S2_rs2_data), .mem_type(S2_mem_type), .alu_fun(S2_alu_fun));
+                                           .rd_tag(S2_rd_tag), .mem_type(S2_mem_type), .alu_fun(S2_alu_fun));
                                            
     logic [4:0] S2_mem_addr_2;
     logic S2_mem_write;
     logic [31:0] S2_mem_write_data;
     logic S2_mem_sign;
     logic [1:0] S2_mem_size;
-    StoreUnit Store2(.V1(S2_V1), .V2(S2_V2), .V3(S2_V3), .V1_valid(S2_V1_valid), .V2_valid(S2_V2_valid), .V3_Valid(S2_V3_valid), .rd_tag(S2_rd_tag), 
+    StoreUnit Store2(.V1(S2_V1), .V2(S2_V2), .V3(S2_V3), .V1_valid(S2_V1_valid), .V2_valid(S2_V2_valid), .V3_valid(S2_V3_valid), .rd_tag(S2_rd_tag), 
                      .mem_type(S2_mem_type), .mem_resp(S2_mem_resp), .mem_resp_valid(S2_mem_resp_valid), .done(S2_done), .MEM_ADDR2(S2_mem_addr_2),
                      .MEM_WRITE(S2_mem_write), .MEM_WRITE_DATA(S2_mem_write_data), .MEM_SIGN(S2_mem_sign), .MEM_SIZE(S2_mem_size));
     
@@ -312,13 +313,13 @@ module OTTER_MCU(input CLK,
     logic ALU1_done, ALU1_busy, ALU1_V1_valid, ALU1_V2_valid, ALU1_V3_valid;
     logic [31:0] ALU1_V1, ALU1_V2, ALU1_V3;
     logic [4:0] ALU1_rd_tag;
-    logic [31:0] ALU1_rs2_data;
+//    logic [31:0] ALU1_rs2_data;
     logic [2:0] ALU1_mem_type;
     logic [3:0] ALU1_alu_fun;
     ReservationStation #(ALU_1) RS_ALU1(.DISPATCH_TASK(DISPATCH_TASK), .dest_RS(dest_rs), .T1(T1), .T2(T2), .T3(T3),
                                         .cdb_in(cdb_data), .done(ALU1_done), .BUSY(ALU1_busy), .V1(ALU1_V1),
                                         .V2(ALU1_V2), .V3(ALU1_V3), .V1_valid(ALU1_V1_valid), .V2_valid(ALU1_V2_valid), .V3_valid(ALU1_V3_valid),
-                                        .rd_tag(ALU1_rd_tag), .rs2_data(ALU1_rs2_data), .mem_type(ALU1_mem_type), .alu_fun(ALU1_alu_fun));
+                                        .rd_tag(ALU1_rd_tag), .mem_type(ALU1_mem_type), .alu_fun(ALU1_alu_fun));
     
     logic [31:0] ALU1_CDB_val;
     RS_tag_type ALU1_CDB_tag;
@@ -330,13 +331,13 @@ module OTTER_MCU(input CLK,
     logic ALU2_done, ALU2_busy, ALU2_V1_valid, ALU2_V2_valid, ALU2_V3_valid;
     logic [31:0] ALU2_V1, ALU2_V2, ALU2_V3;
     logic [4:0] ALU2_rd_tag;
-    logic [31:0] ALU2_rs2_data;
+//    logic [31:0] ALU2_rs2_data;
     logic [2:0] ALU2_mem_type;
     logic [3:0] ALU2_alu_fun;
     ReservationStation #(ALU_2) RS_ALU2(.DISPATCH_TASK(DISPATCH_TASK), .dest_RS(dest_rs), .T1(T1), .T2(T2), .T3(T3),
                                         .cdb_in(cdb_data), .done(ALU2_done), .BUSY(ALU2_busy), .V1(ALU2_V1),
                                         .V2(ALU2_V2), .V3(ALU2_V3), .V1_valid(ALU2_V1_valid), .V2_valid(ALU2_V2_valid), .V3_valid(ALU2_V3_valid),
-                                        .rd_tag(ALU2_rd_tag), .rs2_data(ALU2_rs2_data), .mem_type(ALU2_mem_type), .alu_fun(ALU2_alu_fun));
+                                        .rd_tag(ALU2_rd_tag), .mem_type(ALU2_mem_type), .alu_fun(ALU2_alu_fun));
     
     logic [31:0] ALU2_CDB_val;
     RS_tag_type ALU2_CDB_tag;
@@ -360,12 +361,12 @@ module OTTER_MCU(input CLK,
 
     // ************************ BEGIN PROGRAMMER ************************ 
 
-    assign mem_addr_after = s_prog_ram_we ? s_prog_ram_addr : MEM_aluResult;  // 2:1 mux
-    assign mem_data_after = s_prog_ram_we ? s_prog_ram_data : MEM_DIN2;  // 2:1 mux
-    assign mem_size_after = s_prog_ram_we ? 2'b10 : EX_MEM_instr.mem_type[1:0];  // 2:1 mux
-    assign mem_sign_after = s_prog_ram_we ? 1'b0 : EX_MEM_instr.mem_type[2];  // 2:1 mux
-    assign mem_we_after = s_prog_ram_we | EX_MEM_instr.memWrite;  // or gate
-    assign RESET = s_prog_mcu_reset | EXT_RESET;  // or gate
+//    assign mem_addr_after = s_prog_ram_we ? s_prog_ram_addr : MEM_aluResult;  // 2:1 mux
+//    assign mem_data_after = s_prog_ram_we ? s_prog_ram_data : MEM_DIN2;  // 2:1 mux
+//    assign mem_size_after = s_prog_ram_we ? 2'b10 : EX_MEM_instr.mem_type[1:0];  // 2:1 mux
+//    assign mem_sign_after = s_prog_ram_we ? 1'b0 : EX_MEM_instr.mem_type[2];  // 2:1 mux
+//    assign mem_we_after = s_prog_ram_we | EX_MEM_instr.memWrite;  // or gate
+//    assign RESET = s_prog_mcu_reset | EXT_RESET;  // or gate
 
     // ************************ END PROGRAMMER ************************               
                            

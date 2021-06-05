@@ -38,6 +38,9 @@ module MapTable(
 );
         
     MTEntry_type map_table [31:0];
+    logic [31:0] reg_data_inter ;
+    logic [4:0] writeReg_addr_inter;
+    logic reg_valid_inter;
     
     always_ff @(posedge CLK) // map destination register of issued task in map table
     begin
@@ -56,19 +59,23 @@ module MapTable(
     // Comparator to send data to reg file
     always_ff @(posedge CLK)
     begin
-        reg_valid = 0;
+        reg_valid_inter = 0;
         for (int i =0; i < 32; i++)
         begin
             if (map_table[i].tag == cdb_in.tag) 
             begin
-                reg_data = cdb_in.val;
-                reg_valid = 1;
-                regWrite_addr = i;
+                reg_data_inter = cdb_in.data;
+                reg_valid_inter = 1;
+                writeReg_addr_inter = i;
                 map_table[i].busy = 0; // free up register after it's been written to
                 map_table[i].tag = INVALID;
             end    
         end    
     end 
-       
+    
+    assign reg_data = reg_data_inter;
+    assign reg_valid = reg_valid_inter;
+    assign writeReg_addr = writeReg_addr_inter;
+    
 endmodule
 
