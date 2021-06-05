@@ -40,10 +40,11 @@ module StoreUnit(
     logic [31:0] mem_addr;
     logic mem_write, complete;
     
-    initial begin complete = 1; end
+//    initial begin complete = 1; end
     
     always_comb
     begin
+        complete = 1;
         mem_write = 0;
         mem_addr = V1 + V2; // calculate address into memory to store
         if (V1_valid && V2_valid && V3_valid)
@@ -51,12 +52,15 @@ module StoreUnit(
             complete = 0;
             mem_write = 1;
         end
+        
+        if (mem_resp_valid) complete = mem_resp;
+        
     end
     
-    always_comb
-    begin
-        if (mem_resp_valid) complete = mem_resp;
-    end
+//    always_comb
+//    begin
+//        if (mem_resp_valid) complete = mem_resp;
+//    end
   
     assign done = complete;
     assign MEM_ADDR2 = mem_addr;

@@ -45,14 +45,16 @@ module LoadUnit(
     logic [31:0] mem_addr;
     logic mem_read;
     
-    initial 
-    begin 
-        complete = 1; 
-        mem_read = 0;
-    end
+//    initial 
+//    begin 
+        
+        
+//    end
     
     always_comb
     begin
+        complete = 1; 
+        mem_read = 0;
         if (mem_resp && mem_resp_valid)  // Broadcast result over CDB
         begin
             complete = 0;
@@ -63,16 +65,23 @@ module LoadUnit(
                 complete = 1;
             end
         end
-    end
-    
-    always_comb
-    begin
+        
         if (V1_valid && V2_valid)
         begin
             mem_read = 1;
             mem_addr = V1 + V2; // calculate address to load from
         end
+        
     end
+    
+//    always_comb
+//    begin
+//        if (V1_valid && V2_valid)
+//        begin
+//            mem_read = 1;
+//            mem_addr = V1 + V2; // calculate address to load from
+//        end
+//    end
     
     assign CDB_val = cdb_val;
     assign CDB_tag = cdb_tag;

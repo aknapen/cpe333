@@ -58,6 +58,7 @@ module IssueQueue(
     
     always_ff @(posedge CLK) // Dispatch stage
     begin
+        stall = 0;
         rs = INVALID;
         case (task_queue[0].opcode) // peak top of queue
             STORE:

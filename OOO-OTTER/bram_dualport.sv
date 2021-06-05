@@ -267,7 +267,9 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
     input MEM_READ_1; 
     input [31:0] MEM_ADDR1_0; 
     input [31:0]MEM_ADDR1_1;
-    
+    output [31:0] MEM_DOUT1_0;
+    output [31:0] MEM_DOUT1_1;
+        
     // Data Memory Port
     
     input [31:0] MEM_ADDR2_L1; // Load1 signals
@@ -308,7 +310,7 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
     logic mem_resp_valid_S1, mem_resp_valid_S2;
     
     // L1/L2 intermediates
-    logic [31:0] memOut2_L1, memOut_L2;
+    logic [31:0] memOut2_L1, memOut2_L2;
     logic saved_mem_sign_L1, saved_mem_sign_L2;
     logic [1:0] saved_mem_size_L1, saved_mem_size_L2;
     logic [31:0] saved_mem_addr2_L1, saved_mem_addr2_L2;
@@ -336,16 +338,20 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
     //========================================//
     //========== Instruction Memory ==========//
     //========================================//
+    logic[31:0] mem_dout1_0;
+    logic[31:0] mem_dout1_1;
+    
     always_ff @(posedge MEM_CLK)
     begin
-        if(MEM_READ1)
+        if(MEM_READ_1)
         begin
-            MEM_DOUT1_0 <= memory[memAddr1_0];
-            MEM_DOUT1_1 <= memory[memAddr1_1];
+            mem_dout1_0 <= memory[memAddr1_0];
+            mem_dout1_1 <= memory[memAddr1_1];
         end
     end
     
-    
+    assign MEM_DOUT1_0 = mem_dout1_0;
+    assign MEM_DOUT1_1 = mem_dout1_1;
     //=======================================//
     //============= Data Memory =============//
     //=======================================//
@@ -393,7 +399,7 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
                         1:  memOut2_L1_sliced = {24'd0,memOut2_L1[15:8]};
                         0:  memOut2_L1_sliced = {24'd0,memOut2_L1[7:0]};
                    endcase
-                5: case(saved_mem_addr2[1:0])
+                5: case(saved_mem_addr2_L1[1:0])
                         3: memOut2_L1_sliced = {16'd0,memOut2_L1};      //lhu //spans two words, NOT YET SUPPORTED!
                         2: memOut2_L1_sliced = {16'd0,memOut2_L1[31:16]};
                         1: memOut2_L1_sliced = {16'd0,memOut2_L1[23:8]};
@@ -427,6 +433,7 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
                         2:  memOut2_L2_sliced = {{24{memOut2_L2[23]}},memOut2_L2[23:16]};
                         1:  memOut2_L2_sliced = {{24{memOut2_L2[15]}},memOut2_L2[15:8]};
                         0:  memOut2_L2_sliced = {{24{memOut2_L2[7]}},memOut2_L2[7:0]};
+                        
                    endcase
                         
                 1: case(saved_mem_addr2_L2[1:0])
@@ -445,7 +452,7 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
                         1:  memOut2_L2_sliced = {24'd0,memOut2_L2[15:8]};
                         0:  memOut2_L2_sliced = {24'd0,memOut2_L2[7:0]};
                    endcase
-                5: case(saved_mem_addr2[1:0])
+                5: case(saved_mem_addr2_L2[1:0])
                         3: memOut2_L2_sliced = {16'd0,memOut2_L2};      //lhu //spans two words, NOT YET SUPPORTED!
                         2: memOut2_L2_sliced = {16'd0,memOut2_L2[31:16]};
                         1: memOut2_L2_sliced = {16'd0,memOut2_L2[23:8]};
@@ -504,7 +511,7 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
         if(memWrite2_S2)
         begin
             m=0;
-            for(k=0;i<NUM_COL;k=k+1) begin
+            for(k=0;k<NUM_COL;k=k+1) begin
                 if(weA_S2[k]) begin
                         case(MEM_SIZE_S2)
                             0: memory[memAddr2_S2][k*COL_WIDTH +: COL_WIDTH] <= MEM_DIN2_S2[7:0]; //MEM_DIN2[(3-i)*COL_WIDTH +: COL_WIDTH];
@@ -529,16 +536,16 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
     assign MEM_RESP_VALID_S1 = mem_resp_valid_S1;
     assign MEM_RESP_VALID_S2 = mem_resp_valid_S2;
     
-    always_comb begin
-        IO_WR=0;
-        if(MEM_ADDR2 >= 32'h11000000)
-        begin       
-            if(MEM_WRITE2) IO_WR = 1;
-            memWrite2=0; 
-        end
-        else begin 
-            memWrite2=MEM_WRITE2;
-        end    
-    end 
+//    always_comb begin
+//        IO_WR=0;
+//        if(MEM_ADDR2 >= 32'h11000000)
+//        begin       
+//            if(MEM_WRITE2) IO_WR = 1;
+//            memWrite2=0; 
+//        end
+//        else begin 
+//            memWrite2=MEM_WRITE2;
+//        end    
+//    end 
         
  endmodule

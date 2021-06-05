@@ -36,10 +36,11 @@ module OTTER_ALU(
     RS_tag_type cdb_tag;
     logic complete;
   
-    initial begin complete = 1; end
+//    initial begin complete = 1; end
     
     always_comb
     begin //reevaluate If these change
+//        complete = 1;
         if (V1_valid && V2_valid)
         begin
             case(alu_fun)

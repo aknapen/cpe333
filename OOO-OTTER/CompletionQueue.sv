@@ -48,7 +48,7 @@ module CompletionQueue( // Store does not broadcast to the CDB
     
     always_ff @(posedge CLK) // broadcast to CDB
     begin
-        if (task_queue.size() != 0) cdb_out = completion_queue.pop_front();  
+        if (completion_queue.size() != 0) cdb_out = completion_queue.pop_front();  
     end
     
 endmodule

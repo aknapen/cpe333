@@ -204,7 +204,7 @@ module OTTER_MCU(input CLK,
     //============== Load 1==============//
     logic L1_done, L1_busy, L1_V1_valid, L1_V2_valid, L1_V3_valid;
     logic [31:0] L1_V1, L1_V2, L1_V3;
-    logic [4:0] L1_rd_tag;
+    RS_tag_type L1_rd_tag;
 //    logic [31:0] L1_rs2_data;
     logic [2:0] L1_mem_type;
     logic [3:0] L1_alu_fun;
@@ -227,7 +227,7 @@ module OTTER_MCU(input CLK,
     //============== Load 2==============//
     logic L2_done, L2_busy, L2_V1_valid, L2_V2_valid, L2_V3_valid;
     logic [31:0] L2_V1, L2_V2, L2_V3;
-    logic [4:0] L2_rd_tag;
+    RS_tag_type L2_rd_tag;
 //    logic [31:0] L2_rs2_data;
     logic [2:0] L2_mem_type;
     logic [3:0] L2_alu_fun;
@@ -251,7 +251,7 @@ module OTTER_MCU(input CLK,
     //============== Store 1==============//
     logic S1_done, S1_busy, S1_V1_valid, S1_V2_valid, S1_V3_valid;
     logic [31:0] S1_V1, S1_V2, S1_V3;
-    logic [4:0] S1_rd_tag;
+    RS_tag_type S1_rd_tag;
 //    logic [31:0] S1_rs2_data;
     logic [2:0] S1_mem_type;
     logic [3:0] S1_alu_fun;
@@ -273,7 +273,7 @@ module OTTER_MCU(input CLK,
     //============== Store 2==============//
     logic S2_done, S2_busy, S2_V1_valid, S2_V2_valid, S2_V3_valid;
     logic [31:0] S2_V1, S2_V2, S2_V3;
-    logic [4:0] S2_rd_tag;
+    RS_tag_type S2_rd_tag;
 //    logic [31:0] S2_rs2_data;
     logic [2:0] S2_mem_type;
     logic [3:0] S2_alu_fun;
@@ -293,7 +293,7 @@ module OTTER_MCU(input CLK,
     
     
     //============== OTTER MEMORY ==============//
-    Memory #(14) memory(.MEM_CLK(CLK),.MEM_ADDR1_0(fetch_pc_0), .MEM_ADDR1_1(fetch_pc_1), .MEM_READ1(memRead1), .MEM_DOUT1_0(IR_0), .MEM_DOUT1_1(IR_1), // Instruction fetch
+    OTTER_mem_byte #(14) memory(.MEM_CLK(CLK),.MEM_ADDR1_0(fetch_pc_0), .MEM_ADDR1_1(fetch_pc_1), .MEM_READ_1(memRead1), .MEM_DOUT1_0(IR_0), .MEM_DOUT1_1(IR_1), // Instruction fetch
     
                         .MEM_ADDR2_L1(L1_mem_addr_2), .MEM_DOUT2_L1(L1_mem_data_in),  .MEM_READ2_L1(L1_memRead), .MEM_SIGN_L1(L1_mem_sign), .MEM_SIZE_L1(L1_mem_size), // L1 ports
                         .MEM_RESP_L1(L1_mem_resp), .MEM_RESP_VALID_L1(L1_mem_resp_valid),
@@ -305,14 +305,14 @@ module OTTER_MCU(input CLK,
                         .MEM_RESP_S1(s1_mem_resp), .MEM_RESP_VALID_S1(S1_mem_resp_valid),
                         
                         .MEM_ADDR2_S2(S2_mem_addr_2), .MEM_DIN2_S2(S2_mem_write_data), .MEM_WRITE_S2(S2_mem_write), .MEM_SIGN_S2(S2_mem_sign), .MEM_SIZE_S2(S2_mem_size), // S2 ports
-                        .MEM_RESP_S2(S2_mem_resp), .MEM_RESP_VALID_S2(S2_mem_resp_valid),
+                        .MEM_RESP_S2(S2_mem_resp), .MEM_RESP_VALID_S2(S2_mem_resp_valid)
 
-                        .IO_IN(IOBUS_IN),.IO_WR(IOBUS_WR));
+                        );
     
     //============== ALU 1==============//    
     logic ALU1_done, ALU1_busy, ALU1_V1_valid, ALU1_V2_valid, ALU1_V3_valid;
     logic [31:0] ALU1_V1, ALU1_V2, ALU1_V3;
-    logic [4:0] ALU1_rd_tag;
+    RS_tag_type ALU1_rd_tag;
 //    logic [31:0] ALU1_rs2_data;
     logic [2:0] ALU1_mem_type;
     logic [3:0] ALU1_alu_fun;
@@ -330,7 +330,7 @@ module OTTER_MCU(input CLK,
     //============== ALU 2==============//
     logic ALU2_done, ALU2_busy, ALU2_V1_valid, ALU2_V2_valid, ALU2_V3_valid;
     logic [31:0] ALU2_V1, ALU2_V2, ALU2_V3;
-    logic [4:0] ALU2_rd_tag;
+    RS_tag_type ALU2_rd_tag;
 //    logic [31:0] ALU2_rs2_data;
     logic [2:0] ALU2_mem_type;
     logic [3:0] ALU2_alu_fun;
@@ -341,8 +341,15 @@ module OTTER_MCU(input CLK,
     
     logic [31:0] ALU2_CDB_val;
     RS_tag_type ALU2_CDB_tag;
-    OTTER_ALU ALU2(.V1(ALU2_V1), .V2(ALU2_V2), .V1_valid(ALU2_V1_valid), .V2_valid(ALU2_V2_valid), .alu_fun(ALU2_alu_fun), .rd_tag(ALU2_rd_tag), 
-                   .CDB_val(ALU2_CDB_val), .CDB_tag(ALU2_CDB_tag), .done(ALU2_done));
+    OTTER_ALU ALU2(.V1(ALU2_V1), 
+                    .V2(ALU2_V2), 
+                    .V1_valid(ALU2_V1_valid), 
+                    .V2_valid(ALU2_V2_valid), 
+                    .alu_fun(ALU2_alu_fun), 
+                    .rd_tag(ALU2_rd_tag), 
+                   .CDB_val(ALU2_CDB_val), 
+                   .CDB_tag(ALU2_CDB_tag), 
+                   .done(ALU2_done));
     
  
     assign rs_busy = {L1_busy, L2_busy, S1_busy, S2_busy, ALU1_busy, ALU2_busy}; // concatenate each RS's busy bits
