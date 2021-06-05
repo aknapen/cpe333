@@ -5,7 +5,7 @@ module InstructionDecode(
     input [31:0] IF_ID_pc_0, IF_ID_pc_1,
     input [31:0] IR_0, IR_1,
     input regWrite,
-    input regWrite_addr,
+    input [4:0] regWrite_addr,
     input [31:0] WB_rfIn,
     output task_t TASK_0, TASK_1
     );
