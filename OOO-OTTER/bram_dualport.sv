@@ -305,7 +305,6 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
     output MEM_RESP_VALID_S2;
     
     // S1/S2 intermediates
-    logic memWrite2_S1, memWrite2_S2; 
     logic [NUM_COL-1:0] weA_S1, weA_S2;    
     logic mem_resp_valid_S1, mem_resp_valid_S2;
     
@@ -475,7 +474,7 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
     
     integer i,j;
     always_ff @(posedge MEM_CLK) begin
-        if(memWrite2_S1)
+        if(MEM_WRITE_S1)
         begin
             j=0;
             for(i=0;i<NUM_COL;i=i+1) begin
@@ -508,7 +507,7 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
     
     integer k,m;
     always_ff @(posedge MEM_CLK) begin
-        if(memWrite2_S2)
+        if(MEM_WRITE_S2)
         begin
             m=0;
             for(k=0;k<NUM_COL;k=k+1) begin

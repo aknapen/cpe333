@@ -40,11 +40,6 @@ module IssueQueue(
     
     assign busy = rs_busy;
     
-    initial 
-    begin
-        stall = 0;
-    end
-    
     always_ff @(posedge CLK) // Issue Stage
     begin
         full = 0;
