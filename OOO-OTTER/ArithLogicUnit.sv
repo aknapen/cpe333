@@ -43,18 +43,18 @@ module OTTER_ALU(
         if (V1_valid && V2_valid)
         begin
             case(alu_fun)
-                0:  ALUOut = A + B;     //add
-                8:  ALUOut = A - B;     //sub
-                6:  ALUOut = A | B;     //or
-                7:  ALUOut = A & B;     //and
-                4:  ALUOut = A ^ B;     //xor
-                5:  ALUOut =  A >> B[4:0];    //srl
-                1:  ALUOut =  A << B[4:0];    //sll
-               13:  ALUOut =  $signed(A) >>> B[4:0];    //sra
-                2:  ALUOut = $signed(A) < $signed(B) ? 1: 0;       //slt
-                3:  ALUOut = A < B ? 1: 0;      //sltu
-                9:  ALUOut = A; //copy op1 (lui)
-                10: ALUOut = A * B;
+                0:  ALUOut = V1 + V2 ;     //add
+                8:  ALUOut = V1 - V2 ;     //su V2 
+                6:  ALUOut = V1 | V2 ;     //or
+                7:  ALUOut = V1 & V2 ;     //and
+                4:  ALUOut = V1 ^ V2 ;     //xor
+                5:  ALUOut =  V1 >>  V2 [4:0];    //srl
+                1:  ALUOut =  V1 <<  V2 [4:0];    //sll
+               13:  ALUOut =  $signed(V1) >>>  V2 [4:0];    //sra
+                2:  ALUOut = $signed(V1) < $signed( V2 ) ? 1: 0;       //slt
+                3:  ALUOut = V1 < V2 ? 1: 0;      //sltu
+                9:  ALUOut = V1; //copy op1 (lui)
+                10: ALUOut = V1 *  V2 ;
                 default: ALUOut = 0; 
             endcase
         end
@@ -65,7 +65,7 @@ module OTTER_ALU(
     begin
         cdb_tag = INVALID; // don't want to add to commit queue until ready
         complete = 0;
-        if (!CDB_busy && V1_valid && V2_valid)
+        if (V1_valid && V2_valid)
         begin
             cdb_val = ALUOut;
             cdb_tag = rd_tag;

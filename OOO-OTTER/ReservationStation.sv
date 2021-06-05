@@ -13,7 +13,7 @@ module ReservationStation #(parameter RS_TAG = INVALID) (
    output [31:0] V1, V2, V3, // value of operands for FU
    output V1_valid, V2_valid, V3_valid, // tell FU if operands are 
    output RS_tag_type rd_tag, // specify to FU where register result needs to go to
-   output [31:0] rs2_data, // need to send rs2 data to the store unit
+//   output [31:0] rs2_data, // need to send rs2 data to the store unit
    output [2:0] mem_type,
    output alu_fun // output function to ALU
 );
@@ -91,6 +91,6 @@ module ReservationStation #(parameter RS_TAG = INVALID) (
     assign BUSY = busy;
     assign OPCODE = curr_task.opcode;
     assign alu_fun = curr_task.alu_fun; // ALU FU needs alu fun
-    assing rs2_data = curr_task.rs2_data; // STORE FU needs RS2 data
+//    assign rs2_data = curr_task.rs2_data; // STORE FU needs RS2 data
     assign mem_type = curr_task.mem_type; // STORE/LOAD FUs need mem_type
 endmodule

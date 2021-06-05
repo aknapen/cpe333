@@ -28,33 +28,38 @@ module LoadUnit(
     input logic mem_resp,
     input logic mem_resp_valid,
     input logic [31:0] mem_data_in,
-    input logic CDB_busy,
     
     output logic [31:0] CDB_val,
     output RS_tag_type CDB_tag,
     output logic done,
     output logic [31:0] MEM_ADDR2,
     output logic MEM_SIGN,
-    output logic [1:0] MEM_SIZE
+    output logic [1:0] MEM_SIZE,
+    output logic MEM_READ
     );
     
     // intermediates
     logic [31:0] cdb_val;
     RS_tag_type cdb_tag;
     logic complete;
+    logic [31:0] mem_addr;
+    logic mem_read;
     
-    initial begin complete = 1; end
+    initial 
+    begin 
+        complete = 1; 
+        mem_read = 0;
+    end
     
     always_comb
     begin
         if (mem_resp && mem_resp_valid)  // Broadcast result over CDB
         begin
             complete = 0;
-            if (!CDB_busy && V1_valid && V2_valid)
+            if (V1_valid && V2_valid)
             begin
                 cdb_val = mem_data_in;
                 cdb_tag = rd_tag;
-                cdb_busy = 1;
                 complete = 1;
             end
         end
@@ -64,16 +69,17 @@ module LoadUnit(
     begin
         if (V1_valid && V2_valid)
         begin
+            mem_read = 1;
             mem_addr = V1 + V2; // calculate address to load from
         end
     end
     
     assign CDB_val = cdb_val;
     assign CDB_tag = cdb_tag;
-    assign CDB_busy = cdb_busy;
     assign done = complete;
     assign MEM_ADDR2 = mem_addr;
     assign MEM_SIGN =  mem_type[2];
     assign MEM_SIZE = mem_type[1:0];
+    assign MEM_READ = mem_read;
     
 endmodule
