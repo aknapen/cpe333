@@ -4,8 +4,14 @@
 
 
 .text
+
 	li a0, 20
-	addi a0, a0, a1
+	addi a0, a0, 3
+
+	li a1, 5
+	li a2, 7
+	li a3, 109
+	li a4, 26
 
 	add a2, a3, a4
 	sub a3, a4, a2
@@ -30,5 +36,3 @@
 	sub a3, a4, a2
 	add a2, a3, a4
 	sub a3, a4, a2
-
-	
