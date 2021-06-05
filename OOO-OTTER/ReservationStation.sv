@@ -61,6 +61,7 @@ module ReservationStation #(parameter RS_TAG = INVALID) (
             v1_valid = 1;
             v1 = cdb_in.data;
         end
+        if (!busy) v1_valid = 0;
     end
     
     always_comb // setting V2
@@ -77,6 +78,7 @@ module ReservationStation #(parameter RS_TAG = INVALID) (
             v2_valid = 1;
             v2 = cdb_in.data;
         end
+        if (!busy) v2_valid = 0;
     end
     
     always_comb // setting V3
@@ -93,13 +95,14 @@ module ReservationStation #(parameter RS_TAG = INVALID) (
             v3_valid = 1;
             v3 = cdb_in.data;
         end
+        if (!busy) v3_valid = 0;
     end
     
     assign V1 = v1;
     assign V1_valid = v1_valid;
     assign V2 = v2;
     assign V2_valid = v2_valid;
-    
+    assign rd_tag = RS_TAG;
     assign BUSY = busy;
     assign OPCODE = curr_task.opcode;
     assign alu_fun = curr_task.alu_fun; // ALU FU needs alu fun

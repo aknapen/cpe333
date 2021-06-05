@@ -37,13 +37,38 @@ module CompletionQueue( // Store does not broadcast to the CDB
     
     cdb_t completion_queue [$:15];
     cdb_t cdb_out; // intermediate
+    cdb_t in1, in2, in3, in4;
+    
+    always_comb
+    begin
+        in1.tag = TAG_IN1;
+        in1.data = DATA_IN1;
+    end
+    
+    always_comb
+    begin
+        in2.tag = TAG_IN2;
+        in2.data = DATA_IN2;
+    end
+    
+    always_comb
+    begin
+        in3.tag = TAG_IN3;
+        in3.data = DATA_IN3;
+    end
+    
+    always_comb
+    begin
+        in4.tag = TAG_IN4;
+        in4.data = DATA_IN4;
+    end
     
     always_ff @(posedge CLK) // add to completion queue
     begin
-        if (TAG_IN1 != INVALID) completion_queue.push_back({TAG_IN1, DATA_IN1});
-        if (TAG_IN2 != INVALID) completion_queue.push_back({TAG_IN2, DATA_IN2});
-        if (TAG_IN3 != INVALID) completion_queue.push_back({TAG_IN3, DATA_IN3});
-        if (TAG_IN4 != INVALID) completion_queue.push_back({TAG_IN4, DATA_IN4});
+        if (TAG_IN1 != INVALID) completion_queue.push_back(in1);
+        if (TAG_IN2 != INVALID) completion_queue.push_back(in2);
+        if (TAG_IN3 != INVALID) completion_queue.push_back(in3);
+        if (TAG_IN4 != INVALID) completion_queue.push_back(in4);
     end
     
     always_ff @(posedge CLK) // broadcast to CDB
