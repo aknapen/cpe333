@@ -4,8 +4,9 @@ module ReservationStation #(parameter RS_TAG = INVALID) (
    input task_t DISPATCH_TASK,
    input RS_tag_type dest_RS, // Reservation Station Selector
    input RS_tag_type T1, T2, T3, // register tags from MAP table
-   input RS_tag_type CDB_tag, // tag from CDB
-   input [31:0] CDB_val, // value from CDB
+//   input RS_tag_type CDB_tag, // tag from CDB
+//   input [31:0] CDB_val, // value from CDB
+   input cdb_t cdb_in, // tag-value pair broadcast on CDB
    input done, // FU tells RS when it's done
    
    output BUSY, // tell issue queue if RS is busy
@@ -43,10 +44,10 @@ module ReservationStation #(parameter RS_TAG = INVALID) (
             v1_valid = 1; // use input value A from incoming task
             v1 = curr_task.A;
         end
-        else if(CDB_tag == T1)
+        else if(cdb_in.tag == T1)
         begin
             v1_valid = 1;
-            v1 = CDB_value;
+            v1 = cdb_in.data;
         end
     end
     
@@ -59,10 +60,10 @@ module ReservationStation #(parameter RS_TAG = INVALID) (
             v2_valid = 1; // use input value B from incoming task
             v2 = curr_task.B;
         end
-        else if(CDB_tag == T2)
+        else if(cdb_in.tag == T2)
         begin
             v2_valid = 1;
-            v2 = CDB_value;
+            v2 = cdb_in.data;
         end
     end
     
@@ -75,10 +76,10 @@ module ReservationStation #(parameter RS_TAG = INVALID) (
             v3_valid = 1; // use input value B from incoming task
             v3 = curr_task.rs2_data;
         end
-        else if(CDB_tag == T3)
+        else if(cdb_in.tag == T3)
         begin
             v3_valid = 1;
-            v3 = CDB_value;
+            v3 = cdb_in.data;
         end
     end
     

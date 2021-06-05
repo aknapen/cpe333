@@ -26,12 +26,14 @@ module MapTable(
     input opcode_t task_opcode,
     input rs1_used, rs2_used,
     input [4:0] rs1_addr, rs2_addr, rd_addr, // assign issue_tag to rd_addr in map table, possibly replace rs1/rs2 vals with tags
-    input RS_tag_type CDB_tag, // tag broadcast on the CDB
-    input [31:0] CDB_val, // value broadcast on the CDB
+//    input RS_tag_type CDB_tag, // tag broadcast on the CDB
+//    input [31:0] CDB_val, // value broadcast on the CDB
+    input cdb_t cdb_in, // tag-value pair broadcast on the CDB
     input RS_tag_type issue_tag, // RS of issued task
     
     output RS_tag_type T1, T2, T3, // tags for the RS, T3 holds rs2 data tag for stores
     output [31:0] reg_data, // data to write to reg file
+    output [4:0] writeReg_addr, // register # to write to in reg file
     output reg_valid // enable for writing to reg file
 );
         
@@ -54,11 +56,14 @@ module MapTable(
     // Comparator to send data to reg file
     always_ff @(posedge CLK)
     begin
+        reg_valid = 0;
         for (int i =0; i < 32; i++)
         begin
-            if (map_table[i].tag == CDB_tag) 
+            if (map_table[i].tag == cdb_in.tag) 
             begin
-                reg_data = CDB_val;
+                reg_data = cdb_in.val;
+                reg_valid = 1;
+                regWrite_addr = i;
                 map_table[i].busy = 0; // free up register after it's been written to
                 map_table[i].tag = INVALID;
             end    

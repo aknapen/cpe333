@@ -19,13 +19,13 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
+import cpu_types::*;
+
 module OTTER_ALU(
     input [31:0] V1, V2,
     input V1_valid, V2_valid,
     input [3:0] alu_fun,
     input RS_tag_type rd_tag,
-    input opcode_t OPCODE,
-    input CDB_busy,
     
     output [31:0] CDB_val,
     output RS_tag_type CDB_tag,

@@ -4,8 +4,9 @@ module InstructionDecode(
     input CLK,
     input [31:0] IF_ID_pc_0, IF_ID_pc_1,
     input [31:0] IR_0, IR_1,
+    input regWrite,
+    input regWrite_addr,
     input [31:0] WB_rfIn,
-    input instr_t MEM_WB_instr,
     output task_t TASK_0, TASK_1
     );
 
@@ -33,7 +34,7 @@ module InstructionDecode(
     
     logic [31:0] rs1_0, rs1_1, rs2_0, rs2_1;
     // Creates a RISC-V register file
-    OTTER_registerFile RF (IR_0[19:15], IR_0[24:20], IR_1[19:15], IR_1[24:20], MEM_WB_instr.rd_addr, WB_rfIn, MEM_WB_instr.regWrite, rs1_0, 
+    OTTER_registerFile RF (IR_0[19:15], IR_0[24:20], IR_1[19:15], IR_1[24:20], regWrite_addr, WB_rfIn, regWrite, rs1_0, 
                            rs1_1, rs2_0, rs2_1, CLK); // Register file
     
     logic [31:0] S_immed_0, S_immed_1, I_immed_0, I_immed_1, U_immed_0, U_immed_1;

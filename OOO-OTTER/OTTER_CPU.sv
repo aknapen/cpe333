@@ -186,93 +186,177 @@ module OTTER_MCU(input CLK,
     
 //======================= BEGIN EXECUTE STAGE ===========================//
 
-    logic [31:0] aluResult, MEM_RS2;
-    logic [31:0] int_pc;
-    
-    RS_tag_type CDB_tag;
-    logic [31:0] CDB_value;
+    logic regWrite;
+    logic [4:0] regWrite_addr;
+    RS_tag_type T1, T2, T3;
+    cdb_t cdb_data;
     
     // Map Table
-    MapTable MT(.*); // Maps Register -> Reservation Station
+    MapTable MT(.task_opcode(DISPATCH_TASK.opcode), .rs1_used(DISPATCH_TASK.rs1_used), .rs2_used(DISPATCH_TASK.rs2_used),
+                .rs1_addr(DISPATCH_TASK.rs1_addr), .rs2_addr(DISPATCH_TASK.rs2_addr), .rd_addr(DISPATCH_TASK.rd_addr),
+                .cdb_in(cdb_data), .issue_tag(dest_rs), .T1(t1), .T2(t2), .T3(t3), .reg_data(WB_rfIn), .writeReg_addr(regWrite_addr),
+                .reg_valid(regWrite)); // Maps Register -> Reservation Station
+    
     
     // Reservation Stations / Functional Units
-    
-    // Load 1 reservation Station 
-    logic Load1_ready;
-    logic L1_V1_valid, L1_V2_valid;
-    assign Load1_ready = L1_V1_valid && L1_V2_valid;
-    // To FU:       V1, V2, Load1_ready, operand, destination_tag
-    // FU To RS:    Done
-    // FU To CDB:   Value, Destination_tag
-    ReservationStation #(LOAD_1) RS_Load1 (.*);
-    LoadUnit Load1(.*);
-    
-    
-    // Load 2 reservation station
-    ReservationStation #(LOAD_2) RS_Load2(.*);
-    LoadUnit Load2(.*);
-    
-    ReservationStation #(STORE_1) RS_Store1(.*);
-    StoreUnit Store1(.*);
-    
-    ReservationStation #(STORE_2) RS_Store2(.*);
-    StoreUnit Store2(.*);
-    
-    ReservationStation #(ALU_1) RS_ALU1(.*);
-    OTTER_ALU ALU1(.*);
-    
-    ReservationStation #(ALU_2) RS_ALU2(.*);
-    OTTER_ALU ALU2(.*);
-    
-    // Register File
- 
-    Execute EX(.*);    
-
-//======================= END EXECUTE STAGE ===========================//
-    
-    logic [31:0] MEM_DIN2, MEM_I_immed;
-    instr_t toMem; // intermediary instruction struct
-    
-    always_comb // logic to signal whether an instruction was the "source" of a load-use hazard
-    begin
-        toMem = DE_EX_instr;
-        if (ld_haz) toMem.ld_haz = 1;
-    end
         
-    always_ff @(posedge CLK) // to push intsr_t through the pipeline stages
-    begin
-        EX_MEM_instr <= toMem;
-        EX_MEM_instr.br_taken <= jb_taken;
-        MEM_aluResult <= aluResult;   
-        MEM_DIN2 <= MEM_RS2; // Need this for din2 into memory
-        MEM_I_immed <= EX_I_immed; // Need this for CSR
-    end
+    //============== Load 1==============//
+    logic L1_done, L1_busy, L1_V1_valid, L1_V2_valid, L1_V3_valid;
+    logic [31:0] L1_V1, L1_V2, L1_V3;
+    logic [4:0] L1_rd_tag;
+    logic [31:0] L1_rs2_data;
+    logic [2:0] L1_mem_type;
+    logic [3:0] L1_alu_fun;
+    ReservationStation #(LOAD_1) RS_Load1 (.DISPATCH_TASK(DISPATCH_TASK), .dest_RS(dest_rs), .T1(T1), .T2(T2), .T3(T3),
+                                           .cdb_in(cdb_data), .done(L1_done), .BUSY(L1_busy), .V1(L1_V1),
+                                           .V2(L1_V2), .V3(L1_V3), .V1_valid(L1_V1_valid), .V2_valid(L1_V2_valid), .V3_valid(L1_V3_valid),
+                                           .rd_tag(L1_rd_tag), .rs2_data(L1_rs2_data), .mem_type(L1_mem_type), .alu_fun(L1_alu_fun));
+    logic [31:0] L1_mem_data_in;
+    RS_tag_type L1_CDB_tag;
+    logic [31:0] L1_CDB_val;
+    logic [31:0] L1_mem_addr_2;
+    logic L1_memRead;
+    logic L1_mem_sign;
+    logic [1:0] L1_mem_size;
+    LoadUnit Load1(.V1(L1_V1), .V2(L1_V2), .V1_valid(L1_V1_valid), .V2_valid(L1_V2_valid), .rd_tag(L1_rd_tag), .mem_type(L1_mem_type), 
+                   .mem_resp(L1_mem_resp), .mem_resp_valid(L1_mem_resp_valid), .mem_data_in(L1_mem_data_in), .MEM_READ(L1_memRead), .CDB_val(L1_CDB_val), 
+                   .CDB_tag(L1_CDB_tag), .done(L1_done), .MEM_ADDR2(L1_mem_addr_2), .MEM_SIGN(L1_mem_sign), .MEM_SIZE(L1_mem_size));
     
-//======================= BEGIN MEMORY STAGE ===========================//
     
-    Memory MEM(.*);
+    //============== Load 2==============//
+    logic L2_done, L2_busy, L2_V1_valid, L2_V2_valid, L2_V3_valid;
+    logic [31:0] L2_V1, L2_V2, L2_V3;
+    logic [4:0] L2_rd_tag;
+    logic [31:0] L2_rs2_data;
+    logic [2:0] L2_mem_type;
+    logic [3:0] L2_alu_fun;
+    ReservationStation #(LOAD_2) RS_Load2(.DISPATCH_TASK(DISPATCH_TASK), .dest_RS(dest_rs), .T1(T1), .T2(T2), .T3(T3),
+                                           .cdb_in(cdb_data), .done(L2_done), .BUSY(L2_busy), .V1(L2_V1),
+                                           .V2(L2_V2), .V3(L2_V3), .V1_valid(L2_V1_valid), .V2_valid(L2_V2_valid), .V3_valid(L2_V3_valid),
+                                           .rd_tag(L2_rd_tag), .rs2_data(L2_rs2_data), .mem_type(L2_mem_type), .alu_fun(L2_alu_fun));
+                                           
+    logic [31:0] L2_mem_data_in;
+    RS_tag_type L2_CDB_tag;
+    logic [31:0] L2_CDB_val;
+    logic [31:0] L2_mem_addr_2;
+    logic L2_memRead;
+    logic L2_mem_sign;
+    logic [1:0] L2_mem_size;
+    LoadUnit Load2(.V1(L2_V1), .V2(L2_V2), .V1_valid(L2_V1_valid), .V2_valid(L2_V2_valid), .rd_tag(L2_rd_tag), .mem_type(L2_mem_type), 
+                   .mem_resp(L2_mem_resp), .mem_resp_valid(L2_mem_resp_valid), .mem_data_in(L2_mem_data_in), .MEM_READ(L2_memRead), .CDB_val(L2_CDB_val), 
+                   .CDB_tag(L2_CDB_tag), .done(L2_done), .MEM_ADDR2(L2_mem_addr_2), .MEM_SIGN(L2_mem_sign), .MEM_SIZE(L2_mem_size));
     
-//======================= END MEMORY STAGE ===========================//
+    
+    //============== Store 1==============//
+    logic S1_done, S1_busy, S1_V1_valid, S1_V2_valid, S1_V3_valid;
+    logic [31:0] S1_V1, S1_V2, S1_V3;
+    logic [4:0] S1_rd_tag;
+    logic [31:0] S1_rs2_data;
+    logic [2:0] S1_mem_type;
+    logic [3:0] S1_alu_fun;
+    ReservationStation #(STORE_1) RS_Store1(.DISPATCH_TASK(DISPATCH_TASK), .dest_RS(dest_rs), .T1(T1), .T2(T2), .T3(T3),
+                                           .cdb_in(cdb_data), .done(S1_done), .BUSY(S1_busy), .V1(S1_V1),
+                                           .V2(S1_V2), .V3(S1_V3), .V1_valid(S1_V1_valid), .V2_valid(S1_V2_valid), .V3_valid(S1_V3_valid),
+                                           .rd_tag(S1_rd_tag), .rs2_data(S1_rs2_data), .mem_type(S1_mem_type), .alu_fun(S1_alu_fun));
+    
+    logic [4:0] S1_mem_addr_2;
+    logic S1_mem_write;
+    logic [31:0] S1_mem_write_data;
+    logic S1_mem_sign;
+    logic [1:0] S1_mem_size;
+    StoreUnit Store1(.V1(S1_V1), .V2(S1_V2), .V3(S1_V3), .V1_valid(S1_V1_valid), .V2_valid(S1_V2_valid), .V3_Valid(S1_V3_valid), .rd_tag(S1_rd_tag), 
+                     .mem_type(S1_mem_type), .mem_resp(S1_mem_resp), .mem_resp_valid(S1_mem_resp_valid), .done(S1_done), .MEM_ADDR2(S1_mem_addr_2),
+                     .MEM_WRITE(S1_mem_write), .MEM_WRITE_DATA(S1_mem_write_data), .MEM_SIGN(S1_mem_sign), .MEM_SIZE(S1_mem_size));
+    
+    
+    //============== Store 2==============//
+    logic S2_done, S2_busy, S2_V1_valid, S2_V2_valid, S2_V3_valid;
+    logic [31:0] S2_V1, S2_V2, S2_V3;
+    logic [4:0] S2_rd_tag;
+    logic [31:0] S2_rs2_data;
+    logic [2:0] S2_mem_type;
+    logic [3:0] S2_alu_fun;
+    ReservationStation #(STORE_2) RS_Store2(.DISPATCH_TASK(DISPATCH_TASK), .dest_RS(dest_rs), .T1(T1), .T2(T2), .T3(T3),
+                                           .cdb_in(cdb_data), .done(S2_done), .BUSY(S2_busy), .V1(S2_V1),
+                                           .V2(S2_V2), .V3(S2_V3), .V1_valid(S2_V1_valid), .V2_valid(S2_V2_valid), .V3_valid(S2_V3_valid),
+                                           .rd_tag(S2_rd_tag), .rs2_data(S2_rs2_data), .mem_type(S2_mem_type), .alu_fun(S2_alu_fun));
+                                           
+    logic [4:0] S2_mem_addr_2;
+    logic S2_mem_write;
+    logic [31:0] S2_mem_write_data;
+    logic S2_mem_sign;
+    logic [1:0] S2_mem_size;
+    StoreUnit Store2(.V1(S2_V1), .V2(S2_V2), .V3(S2_V3), .V1_valid(S2_V1_valid), .V2_valid(S2_V2_valid), .V3_Valid(S2_V3_valid), .rd_tag(S2_rd_tag), 
+                     .mem_type(S2_mem_type), .mem_resp(S2_mem_resp), .mem_resp_valid(S2_mem_resp_valid), .done(S2_done), .MEM_ADDR2(S2_mem_addr_2),
+                     .MEM_WRITE(S2_mem_write), .MEM_WRITE_DATA(S2_mem_write_data), .MEM_SIGN(S2_mem_sign), .MEM_SIZE(S2_mem_size));
+    
+    
+    //============== OTTER MEMORY ==============//
+    Memory #(14) memory(.MEM_CLK(CLK),.MEM_ADDR1_0(fetch_pc_0), .MEM_ADDR1_1(fetch_pc_1), .MEM_READ1(memRead1), .MEM_DOUT1_0(IR_0), .MEM_DOUT1_1(IR_1), // Instruction fetch
+    
+                        .MEM_ADDR2_L1(L1_mem_addr_2), .MEM_DOUT2_L1(L1_mem_data_in),  .MEM_READ2_L1(L1_memRead), .MEM_SIGN_L1(L1_mem_sign), .MEM_SIZE_L1(L1_mem_size), // L1 ports
+                        .MEM_RESP_L1(L1_mem_resp), .MEM_RESP_VALID_L1(L1_mem_resp_valid),
+                        
+                        .MEM_ADDR2_L2(L2_mem_addr_2), .MEM_DOUT2_L2(L2_mem_data_in),  .MEM_READ2_L2(L2_memRead), .MEM_SIGN_L2(L2_mem_sign), .MEM_SIZE_L2(L2_mem_size), // L2 ports
+                        .MEM_RESP_L2(L2_mem_resp), .MEM_RESP_VALID_L2(L2_mem_resp_valid),
+                        
+                        .MEM_ADDR2_S1(S1_mem_addr_2), .MEM_DIN2_S1(S1_mem_write_data), .MEM_WRITE_S1(S1_mem_write), .MEM_SIGN_S1(S1_mem_sign), .MEM_SIZE_S1(S1_mem_size), // S1 ports
+                        .MEM_RESP_S1(s1_mem_resp), .MEM_RESP_VALID_S1(S1_mem_resp_valid),
+                        
+                        .MEM_ADDR2_S2(S2_mem_addr_2), .MEM_DIN2_S2(S2_mem_write_data), .MEM_WRITE_S2(S2_mem_write), .MEM_SIGN_S2(S2_mem_sign), .MEM_SIZE_S2(S2_mem_size), // S2 ports
+                        .MEM_RESP_S2(S2_mem_resp), .MEM_RESP_VALID_S2(S2_mem_resp_valid),
 
-    logic [31:0] WB_I_immed;
+                        .IO_IN(IOBUS_IN),.IO_WR(IOBUS_WR));
     
-    always_ff @(posedge CLK) // to push intsr_t through the pipeline stages and result of the memory
-    begin
-        MEM_WB_instr <= EX_MEM_instr;
-        WB_aluResult <= MEM_aluResult;
-        WB_I_immed <= MEM_I_immed;
-    end
-                               
-//======================= BEGIN WRITEBACK STAGE ===========================//
+    //============== ALU 1==============//    
+    logic ALU1_done, ALU1_busy, ALU1_V1_valid, ALU1_V2_valid, ALU1_V3_valid;
+    logic [31:0] ALU1_V1, ALU1_V2, ALU1_V3;
+    logic [4:0] ALU1_rd_tag;
+    logic [31:0] ALU1_rs2_data;
+    logic [2:0] ALU1_mem_type;
+    logic [3:0] ALU1_alu_fun;
+    ReservationStation #(ALU_1) RS_ALU1(.DISPATCH_TASK(DISPATCH_TASK), .dest_RS(dest_rs), .T1(T1), .T2(T2), .T3(T3),
+                                        .cdb_in(cdb_data), .done(ALU1_done), .BUSY(ALU1_busy), .V1(ALU1_V1),
+                                        .V2(ALU1_V2), .V3(ALU1_V3), .V1_valid(ALU1_V1_valid), .V2_valid(ALU1_V2_valid), .V3_valid(ALU1_V3_valid),
+                                        .rd_tag(ALU1_rd_tag), .rs2_data(ALU1_rs2_data), .mem_type(ALU1_mem_type), .alu_fun(ALU1_alu_fun));
     
-    // Technically, the writeback stage uses the register file since it writes back to the registers 
+    logic [31:0] ALU1_CDB_val;
+    RS_tag_type ALU1_CDB_tag;
+    OTTER_ALU ALU1(.V1(ALU1_V1), .V2(ALU1_V2), .V1_valid(ALU1_V1_valid), .V2_valid(ALU1_V2_valid), .alu_fun(ALU1_alu_fun), .rd_tag(ALU1_rd_tag), 
+                   .CDB_val(ALU1_CDB_val), .CDB_tag(ALU1_CDB_tag), .done(ALU1_done));
     
-    //Creates 4-to-1 multiplexor used to select reg write back data
-    // Mult4 to 1 ( PC+4, CSR reg, dout2 from mem, alu result, sel = wb_sel from decoder, out = finished register in
     
-    // WB_rfIn is connected to the reg file 
+    //============== ALU 2==============//
+    logic ALU2_done, ALU2_busy, ALU2_V1_valid, ALU2_V2_valid, ALU2_V3_valid;
+    logic [31:0] ALU2_V1, ALU2_V2, ALU2_V3;
+    logic [4:0] ALU2_rd_tag;
+    logic [31:0] ALU2_rs2_data;
+    logic [2:0] ALU2_mem_type;
+    logic [3:0] ALU2_alu_fun;
+    ReservationStation #(ALU_2) RS_ALU2(.DISPATCH_TASK(DISPATCH_TASK), .dest_RS(dest_rs), .T1(T1), .T2(T2), .T3(T3),
+                                        .cdb_in(cdb_data), .done(ALU2_done), .BUSY(ALU2_busy), .V1(ALU2_V1),
+                                        .V2(ALU2_V2), .V3(ALU2_V3), .V1_valid(ALU2_V1_valid), .V2_valid(ALU2_V2_valid), .V3_valid(ALU2_V3_valid),
+                                        .rd_tag(ALU2_rd_tag), .rs2_data(ALU2_rs2_data), .mem_type(ALU2_mem_type), .alu_fun(ALU2_alu_fun));
     
-        WriteBack WB(.*);
+    logic [31:0] ALU2_CDB_val;
+    RS_tag_type ALU2_CDB_tag;
+    OTTER_ALU ALU2(.V1(ALU2_V1), .V2(ALU2_V2), .V1_valid(ALU2_V1_valid), .V2_valid(ALU2_V2_valid), .alu_fun(ALU2_alu_fun), .rd_tag(ALU2_rd_tag), 
+                   .CDB_val(ALU2_CDB_val), .CDB_tag(ALU2_CDB_tag), .done(ALU2_done));
+    
+ 
+    assign rs_busy = {L1_busy, L2_busy, S1_busy, S2_busy, ALU1_busy, ALU2_busy}; // concatenate each RS's busy bits
+    
+    
+    // Completion Queue
+    CompletionQueue Completion(.CLK(CLK), .TAG_IN1(L1_CDB_tag), .DATA_IN1(L1_CDB_val), .TAG_IN2(L2_CDB_tag), .DATA_IN2(L2_CDB_val), 
+                               .TAG_IN3(ALU1_CDB_tag), .DATA_IN3(ALU1_CDB_val), .TAG_IN4(ALU2_CDB_tag), .DATA_IN4(ALU2_CDB_val), .CDB_OUT(cdb_data));
+    
+//======================= END EXECUTE STAGE ===========================//
+
+
+
+    
+    
 
     // ************************ BEGIN PROGRAMMER ************************ 
 
