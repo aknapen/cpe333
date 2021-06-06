@@ -58,8 +58,8 @@
        } instr_t;
        
        typedef struct packed {
-           logic [31:0] A;
-           logic [31:0] B;
+//           logic [31:0] A; // Need to calculate operands A and B on issue, replacing with other RS operand MUX inputs
+//           logic [31:0] B;
            opcode_t opcode;
            logic [4:0] rd_addr;
            logic rd_used;
@@ -67,10 +67,16 @@
            logic rs1_used;
            logic [4:0] rs2_addr;
            logic rs2_used;
-           logic [31:0] rs2_data;
+//           logic [31:0] rs2_data; // Need to fetch rs2 data at issue time
            logic [3:0] alu_fun;
            logic [2:0] mem_type;
            logic [1:0] wb_sel;
+           logic opA_sel;
+           logic [31:0] U_immed; // inputs needed for the RS operand MUX
+           logic opB_sel;
+           logic [31:0] I_immed;
+           logic [31:0] S_immed;
+           logic [31:0] pc;
        } task_t;
 
        typedef enum {
@@ -199,6 +205,18 @@ module OTTER_MCU(input CLK,
                 .reg_valid(regWrite), .CLK(CLK)); // Maps Register -> Reservation Station
     
     
+    logic [31:0] rs1, rs2;
+    // Creates a RISC-V register file
+    OTTER_registerFile RF (DISPATCH_TASK.rs1_addr, DISPATCH_TASK.rs2_addr, regWrite_addr, WB_rfIn, regWrite, rs1, rs2, CLK);
+
+    logic [31:0] A, B; // ALU  A and B that will be sent to the Execute Stage
+    // Creates a 2-to-1 multiplexor used to select the A input of the ALU 
+    Mult2to1 ALUAinput (rs1, DISPATCH_TASK.U_immed, DISPATCH_TASK.opA_sel, A);
+    
+    // Creates a 4-to-1 multiplexor used to select the B input of the ALU
+    Mult4to1 ALUBinput (rs2, DISPATCH_TASK.I_immed, DISPATCH_TASK.S_immed, DISPATCH_TASK.pc, DISPATCH_TASK.opB_sel, B);
+
+
     // Reservation Stations / Functional Units
         
     //============== Load 1==============//
@@ -209,7 +227,7 @@ module OTTER_MCU(input CLK,
     logic [2:0] L1_mem_type;
     logic [3:0] L1_alu_fun;
     ReservationStation #(LOAD_1) RS_Load1 (.DISPATCH_TASK(DISPATCH_TASK), .dest_RS(dest_rs), .T1(T1), .T2(T2), .T3(T3),
-                                           .cdb_in(cdb_data), .done(L1_done), .BUSY(L1_busy), .V1(L1_V1),
+                                           .cdb_in(cdb_data), .done(L1_done), .rs2_data(rs2), .A(A), .B(B), .BUSY(L1_busy), .V1(L1_V1),
                                            .V2(L1_V2), .V3(L1_V3), .V1_valid(L1_V1_valid), .V2_valid(L1_V2_valid), .V3_valid(L1_V3_valid),
                                            .rd_tag(L1_rd_tag), .mem_type(L1_mem_type), .alu_fun(L1_alu_fun));
     logic [31:0] L1_mem_data_in;
@@ -232,7 +250,7 @@ module OTTER_MCU(input CLK,
     logic [2:0] L2_mem_type;
     logic [3:0] L2_alu_fun;
     ReservationStation #(LOAD_2) RS_Load2(.DISPATCH_TASK(DISPATCH_TASK), .dest_RS(dest_rs), .T1(T1), .T2(T2), .T3(T3),
-                                           .cdb_in(cdb_data), .done(L2_done), .BUSY(L2_busy), .V1(L2_V1),
+                                           .cdb_in(cdb_data), .done(L2_done), .rs2_data(rs2), .A(A), .B(B), .BUSY(L2_busy), .V1(L2_V1),
                                            .V2(L2_V2), .V3(L2_V3), .V1_valid(L2_V1_valid), .V2_valid(L2_V2_valid), .V3_valid(L2_V3_valid),
                                            .rd_tag(L2_rd_tag), .mem_type(L2_mem_type), .alu_fun(L2_alu_fun));
                                            
@@ -256,7 +274,7 @@ module OTTER_MCU(input CLK,
     logic [2:0] S1_mem_type;
     logic [3:0] S1_alu_fun;
     ReservationStation #(STORE_1) RS_Store1(.DISPATCH_TASK(DISPATCH_TASK), .dest_RS(dest_rs), .T1(T1), .T2(T2), .T3(T3),
-                                           .cdb_in(cdb_data), .done(S1_done), .BUSY(S1_busy), .V1(S1_V1),
+                                           .cdb_in(cdb_data), .done(S1_done), .rs2_data(rs2), .A(A), .B(B), .BUSY(S1_busy), .V1(S1_V1),
                                            .V2(S1_V2), .V3(S1_V3), .V1_valid(S1_V1_valid), .V2_valid(S1_V2_valid), .V3_valid(S1_V3_valid),
                                            .rd_tag(S1_rd_tag), .mem_type(S1_mem_type), .alu_fun(S1_alu_fun));
     
@@ -278,7 +296,7 @@ module OTTER_MCU(input CLK,
     logic [2:0] S2_mem_type;
     logic [3:0] S2_alu_fun;
     ReservationStation #(STORE_2) RS_Store2(.DISPATCH_TASK(DISPATCH_TASK), .dest_RS(dest_rs), .T1(T1), .T2(T2), .T3(T3),
-                                           .cdb_in(cdb_data), .done(S2_done), .BUSY(S2_busy), .V1(S2_V1),
+                                           .cdb_in(cdb_data), .done(S2_done), .rs2_data(rs2), .A(A), .B(B), .BUSY(S2_busy), .V1(S2_V1),
                                            .V2(S2_V2), .V3(S2_V3), .V1_valid(S2_V1_valid), .V2_valid(S2_V2_valid), .V3_valid(S2_V3_valid),
                                            .rd_tag(S2_rd_tag), .mem_type(S2_mem_type), .alu_fun(S2_alu_fun));
                                            
@@ -317,7 +335,7 @@ module OTTER_MCU(input CLK,
     logic [2:0] ALU1_mem_type;
     logic [3:0] ALU1_alu_fun;
     ReservationStation #(ALU_1) RS_ALU1(.DISPATCH_TASK(DISPATCH_TASK), .dest_RS(dest_rs), .T1(T1), .T2(T2), .T3(T3),
-                                        .cdb_in(cdb_data), .done(ALU1_done), .BUSY(ALU1_busy), .V1(ALU1_V1),
+                                        .cdb_in(cdb_data), .done(ALU1_done), .rs2_data(rs2), .A(A), .B(B), .BUSY(ALU1_busy), .V1(ALU1_V1),
                                         .V2(ALU1_V2), .V3(ALU1_V3), .V1_valid(ALU1_V1_valid), .V2_valid(ALU1_V2_valid), .V3_valid(ALU1_V3_valid),
                                         .rd_tag(ALU1_rd_tag), .mem_type(ALU1_mem_type), .alu_fun(ALU1_alu_fun));
     
@@ -335,7 +353,7 @@ module OTTER_MCU(input CLK,
     logic [2:0] ALU2_mem_type;
     logic [3:0] ALU2_alu_fun;
     ReservationStation #(ALU_2) RS_ALU2(.DISPATCH_TASK(DISPATCH_TASK), .dest_RS(dest_rs), .T1(T1), .T2(T2), .T3(T3),
-                                        .cdb_in(cdb_data), .done(ALU2_done), .BUSY(ALU2_busy), .V1(ALU2_V1),
+                                        .cdb_in(cdb_data), .done(ALU2_done), .rs2_data(rs2), .A(A), .B(B), .BUSY(ALU2_busy), .V1(ALU2_V1),
                                         .V2(ALU2_V2), .V3(ALU2_V3), .V1_valid(ALU2_V1_valid), .V2_valid(ALU2_V2_valid), .V3_valid(ALU2_V3_valid),
                                         .rd_tag(ALU2_rd_tag), .mem_type(ALU2_mem_type), .alu_fun(ALU2_alu_fun));
     

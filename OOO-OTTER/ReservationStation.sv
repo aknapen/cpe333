@@ -8,6 +8,9 @@ module ReservationStation #(parameter RS_TAG = INVALID) (
 //   input [31:0] CDB_val, // value from CDB
    input cdb_t cdb_in, // tag-value pair broadcast on CDB
    input done, // FU tells RS when it's done
+   input [31:0] rs2_data,
+   input [31:0] A,
+   input [31:0] B,
    
    output BUSY, // tell issue queue if RS is busy
    output [31:0] V1, V2, V3, // value of operands for FU
@@ -29,7 +32,6 @@ module ReservationStation #(parameter RS_TAG = INVALID) (
 //        busy = 0;
 //        if (!done) busy = 1; // signal to issue queue that RS is ready
 //    end
-    
     always_comb // Task Selection Calculation
     begin
     
@@ -54,7 +56,7 @@ module ReservationStation #(parameter RS_TAG = INVALID) (
         if (T1 == INVALID) // If the RS1 is not mapped in the Map Table go to Reg file or Immediate
         begin
             v1_valid = 1; // use input value A from incoming task
-            v1 = curr_task.A;
+            v1 = A;
         end
         else if(cdb_in.tag == T1)
         begin
@@ -71,7 +73,7 @@ module ReservationStation #(parameter RS_TAG = INVALID) (
         if (T2 == INVALID) // If the RS2 is not mapped in the Map Table go to Reg file or Immediate
         begin
             v2_valid = 1; // use input value B from incoming task
-            v2 = curr_task.B;
+            v2 = B;
         end
         else if(cdb_in.tag == T2)
         begin
@@ -88,7 +90,7 @@ module ReservationStation #(parameter RS_TAG = INVALID) (
         if (T3 == INVALID) // If the RS2 is not mapped in the Map Table go to Reg file or Immediate
         begin
             v3_valid = 1; // use input value B from incoming task
-            v3 = curr_task.rs2_data;
+            v3 = rs2_data;
         end
         else if(cdb_in.tag == T3)
         begin
@@ -102,10 +104,11 @@ module ReservationStation #(parameter RS_TAG = INVALID) (
     assign V1_valid = v1_valid;
     assign V2 = v2;
     assign V2_valid = v2_valid;
+    assign V3_valid = v3_valid;
+    assign V3 = v3;
     assign rd_tag = RS_TAG;
     assign BUSY = busy;
     assign OPCODE = curr_task.opcode;
     assign alu_fun = curr_task.alu_fun; // ALU FU needs alu fun
-//    assign rs2_data = curr_task.rs2_data; // STORE FU needs RS2 data
     assign mem_type = curr_task.mem_type; // STORE/LOAD FUs need mem_type
 endmodule
