@@ -19,7 +19,6 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
-
 module OTTER_registerFile(Read1, Read2, WriteReg, WriteData, RegWrite, Data1, Data2, clock);
     input [4:0] Read1, Read2, WriteReg; //the register numbers to read or write
     input [31:0] WriteData; //data to write

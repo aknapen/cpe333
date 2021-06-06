@@ -70,6 +70,11 @@ module IssueQueue(
                 else stall = 1;
             end
            
+            NOP:
+            begin // Don't assign
+                rs =INVALID;
+            end
+            
             default:
             begin // assign to available ALU RS or stall
                 if (!busy[4]) rs = ALU_1;
