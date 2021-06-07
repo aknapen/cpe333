@@ -315,6 +315,9 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
     logic [31:0] saved_mem_addr2_L1, saved_mem_addr2_L2;
     logic mem_resp_valid_L1, mem_resp_valid_L2;
     
+    logic mem_read2_L1_delayed;
+    logic mem_read2_L2_delayed;
+    
     // assign instruction memory addresses
     wire [ACTUAL_WIDTH-1:0] memAddr1_0, memAddr1_1;
     assign memAddr1_0 =MEM_ADDR1_0[ACTUAL_WIDTH+1:2];
@@ -357,10 +360,23 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
     
     
     //============= LOAD 1 =============//
+    
     always_ff @(posedge MEM_CLK)
     begin
+        mem_read2_L1_delayed <= MEM_READ2_L1;
+    end
+    
+    always_comb
+    begin
+        mem_resp_valid_L1 = 0;
+        if (mem_read2_L1_delayed) mem_resp_valid_L1 = 1;
+    end    
+    always_ff @(posedge MEM_CLK)
+    begin
+//        mem_resp_valid_L1 <= 0;
         if(MEM_READ2_L1)
             memOut2_L1 <= memory[memAddr2_L1];
+//            mem_resp_valid_L1 <= 1;
         
         saved_mem_size_L1 <= MEM_SIZE_L1;
         saved_mem_sign_L1 <= MEM_SIGN_L1;
@@ -405,14 +421,27 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
                         0: memOut2_L1_sliced = {16'd0,memOut2_L1[15:0]};
                    endcase
             endcase
-            mem_resp_valid_L1 = 1;
+//            mem_resp_valid_L1 = 1;
     end
     
     //============= LOAD 2 =============//
     always_ff @(posedge MEM_CLK)
     begin
+        mem_read2_L2_delayed <= MEM_READ2_L2;
+    end
+    
+    always_comb
+    begin
+        mem_resp_valid_L2 = 0;
+        if (mem_read2_L2_delayed) mem_resp_valid_L2 = 1;
+    end 
+    
+    always_ff @(posedge MEM_CLK)
+    begin
+//        mem_resp_valid_L2 <= 0;
         if(MEM_READ2_L2)
             memOut2_L2 <= memory[memAddr2_L2];
+//            mem_resp_valid_L2 <= 1;
         
         saved_mem_size_L2 <= MEM_SIZE_L2;
         saved_mem_sign_L2 <= MEM_SIGN_L2;
@@ -458,7 +487,7 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
                         0: memOut2_L2_sliced = {16'd0,memOut2_L2[15:0]};
                    endcase
             endcase
-            mem_resp_valid_L2 = 1; // send done signal to the L2 functional unit
+//            mem_resp_valid_L2 = 1; // send done signal to the L2 functional unit
     end
     
     //============= STORE 1 =============//         

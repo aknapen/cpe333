@@ -73,7 +73,7 @@
            logic [1:0] wb_sel;
            logic opA_sel;
            logic [31:0] U_immed; // inputs needed for the RS operand MUX
-           logic opB_sel;
+           logic [1:0] opB_sel;
            logic [31:0] I_immed;
            logic [31:0] S_immed;
            logic [31:0] pc;
@@ -215,7 +215,6 @@ module OTTER_MCU(input CLK,
     
     // Creates a 4-to-1 multiplexor used to select the B input of the ALU
     Mult4to1 ALUBinput (rs2, DISPATCH_TASK.I_immed, DISPATCH_TASK.S_immed, DISPATCH_TASK.pc, DISPATCH_TASK.opB_sel, B);
-
 
     // Reservation Stations / Functional Units
         

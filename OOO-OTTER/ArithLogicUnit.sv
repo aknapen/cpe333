@@ -65,12 +65,12 @@ module OTTER_ALU(
     always_comb
     begin
         cdb_tag = INVALID; // don't want to add to commit queue until ready
-        complete = 0;
+        complete = 1; // since ALU operations are not clocked, ALU can always accept new inputs
         if (V1_valid && V2_valid)
         begin
             cdb_val = ALUOut;
             cdb_tag = rd_tag;
-            complete = 1;
+//            complete = 1;
         end
     end
     

@@ -53,12 +53,12 @@ module ReservationStation #(parameter RS_TAG = INVALID) (
     begin
         v1_valid = 0;        
         // Maps the initial value of V1 based on whether or not RS1 is in the Map Table
-        if (T1 == INVALID) // If the RS1 is not mapped in the Map Table go to Reg file or Immediate
+        if (T1 == INVALID && RS_TAG == dest_RS) // If the RS1 is not mapped in the Map Table go to Reg file or Immediate
         begin
             v1_valid = 1; // use input value A from incoming task
             v1 = A;
         end
-        else if(cdb_in.tag == T1)
+        else if(cdb_in.tag == T1 && T1 != INVALID)
         begin
             v1_valid = 1;
             v1 = cdb_in.data;
@@ -70,12 +70,12 @@ module ReservationStation #(parameter RS_TAG = INVALID) (
     begin
         v2_valid = 0;        
         // Maps the initial value of V2 based on whether or not RS2 is in the Map Table
-        if (T2 == INVALID) // If the RS2 is not mapped in the Map Table go to Reg file or Immediate
+        if (T2 == INVALID && RS_TAG == dest_RS) // If the RS2 is not mapped in the Map Table go to Reg file or Immediate
         begin
             v2_valid = 1; // use input value B from incoming task
             v2 = B;
         end
-        else if(cdb_in.tag == T2)
+        else if(cdb_in.tag == T2 && T2 != INVALID)
         begin
             v2_valid = 1;
             v2 = cdb_in.data;
@@ -87,12 +87,12 @@ module ReservationStation #(parameter RS_TAG = INVALID) (
     begin
         v3_valid = 0;        
         // Maps the initial value of V2 based on whether or not RS2 is in the Map Table
-        if (T3 == INVALID) // If the RS2 is not mapped in the Map Table go to Reg file or Immediate
+        if (T3 == INVALID && RS_TAG == dest_RS) // If the RS2 is not mapped in the Map Table go to Reg file or Immediate
         begin
             v3_valid = 1; // use input value B from incoming task
             v3 = rs2_data;
         end
-        else if(cdb_in.tag == T3)
+        else if(cdb_in.tag == T3 && T3 != INVALID)
         begin
             v3_valid = 1;
             v3 = cdb_in.data;

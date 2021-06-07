@@ -65,21 +65,42 @@ module IssueQueue(
             
             LOAD:
             begin // assign to available load RS or stall
-                if (!busy[3]) rs = LOAD_1;
-                else if (!busy[4]) rs = LOAD_2;
+                if (!busy[2]) rs = LOAD_1;
+                else if (!busy[3]) rs = LOAD_2;
                 else stall = 1;
             end
-           
-            NOP:
-            begin // Don't assign
-                rs =INVALID;
-            end
             
-            default:
+            LUI:
             begin // assign to available ALU RS or stall
                 if (!busy[4]) rs = ALU_1;
                 else if (!busy[5]) rs = ALU_2;
                 else stall = 1;
+            end
+            
+            AUIPC:
+            begin // assign to available ALU RS or stall
+                if (!busy[4]) rs = ALU_1;
+                else if (!busy[5]) rs = ALU_2;
+                else stall = 1;
+            end
+            
+            OP:
+            begin // assign to available ALU RS or stall
+                if (!busy[4]) rs = ALU_1;
+                else if (!busy[5]) rs = ALU_2;
+                else stall = 1;
+            end
+            
+            OP_IMM:
+            begin // assign to available ALU RS or stall
+                if (!busy[4]) rs = ALU_1;
+                else if (!busy[5]) rs = ALU_2;
+                else stall = 1;
+            end
+            
+            default:
+            begin // Don't assign
+                rs =INVALID;
             end
         endcase
         

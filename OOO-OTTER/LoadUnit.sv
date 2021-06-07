@@ -55,19 +55,21 @@ module LoadUnit(
     begin
         complete = 1; 
         mem_read = 0;
-        if (mem_resp && mem_resp_valid)  // Broadcast result over CDB
+        cdb_tag = INVALID;
+//        if (mem_resp && mem_resp_valid)  // Broadcast result over CDB
+        if (mem_resp_valid)
         begin
-            complete = 0;
-            if (V1_valid && V2_valid)
-            begin
-                cdb_val = mem_data_in;
-                cdb_tag = rd_tag;
-                complete = 1;
-            end
+            complete = 1;
+//            if (V1_valid && V2_valid)
+//            begin
+            cdb_val = mem_data_in;
+            cdb_tag = rd_tag;
+//            end
         end
         
         if (V1_valid && V2_valid)
         begin
+            complete = 0;
             mem_read = 1;
             mem_addr = V1 + V2; // calculate address to load from
         end
