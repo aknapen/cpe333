@@ -220,7 +220,9 @@ module OTTER_MCU(input CLK,
         
     //============== Load 1==============//
     logic L1_done, L1_busy, L1_V1_valid, L1_V2_valid, L1_V3_valid;
+    
     logic [31:0] L1_V1, L1_V2, L1_V3;
+    
     RS_tag_type L1_rd_tag;
 //    logic [31:0] L1_rs2_data;
     logic [2:0] L1_mem_type;
@@ -229,6 +231,19 @@ module OTTER_MCU(input CLK,
                                            .cdb_in(cdb_data), .done(L1_done), .rs2_data(rs2), .A(A), .B(B), .BUSY(L1_busy), .V1(L1_V1),
                                            .V2(L1_V2), .V3(L1_V3), .V1_valid(L1_V1_valid), .V2_valid(L1_V2_valid), .V3_valid(L1_V3_valid),
                                            .rd_tag(L1_rd_tag), .mem_type(L1_mem_type), .alu_fun(L1_alu_fun));
+    
+    logic L1_fu_V1_valid,L1_fu_V2_valid,L1_fu_V3_valid;
+    logic [31:0] L1_fu_V1, L1_fu_V2, L1_fu_V3;
+    always_ff @(posedge CLK)
+    begin
+        L1_fu_V1 = L1_V1;
+        L1_fu_V2 = L1_V2;
+        L1_fu_V3 = L1_V3;
+        L1_fu_V1_valid = L1_V1_valid;
+        L1_fu_V2_valid = L1_V2_valid;
+        L1_fu_V3_valid = L1_V3_valid;
+    end
+    
     logic [31:0] L1_mem_data_in;
     RS_tag_type L1_CDB_tag;
     logic [31:0] L1_CDB_val;
@@ -236,7 +251,7 @@ module OTTER_MCU(input CLK,
     logic L1_memRead;
     logic L1_mem_sign;
     logic [1:0] L1_mem_size;
-    LoadUnit Load1(.V1(L1_V1), .V2(L1_V2), .V1_valid(L1_V1_valid), .V2_valid(L1_V2_valid), .rd_tag(L1_rd_tag), .mem_type(L1_mem_type), 
+    LoadUnit Load1(.V1(L1_V1), .V2(L1_V2), .V1_valid(L1_fu_V1_valid), .V2_valid(L1_fu_V2_valid), .rd_tag(L1_rd_tag), .mem_type(L1_mem_type), 
                    .mem_resp(L1_mem_resp), .mem_resp_valid(L1_mem_resp_valid), .mem_data_in(L1_mem_data_in), .MEM_READ(L1_memRead), .CDB_val(L1_CDB_val), 
                    .CDB_tag(L1_CDB_tag), .done(L1_done), .MEM_ADDR2(L1_mem_addr_2), .MEM_SIGN(L1_mem_sign), .MEM_SIZE(L1_mem_size));
     
@@ -253,6 +268,18 @@ module OTTER_MCU(input CLK,
                                            .V2(L2_V2), .V3(L2_V3), .V1_valid(L2_V1_valid), .V2_valid(L2_V2_valid), .V3_valid(L2_V3_valid),
                                            .rd_tag(L2_rd_tag), .mem_type(L2_mem_type), .alu_fun(L2_alu_fun));
                                            
+    logic L2_fu_V1_valid,L2_fu_V2_valid,L2_fu_V3_valid;
+    logic [31:0] L2_fu_V1, L2_fu_V2, L2_fu_V3;
+    always_ff @(posedge CLK)
+    begin
+        L2_fu_V1 = L2_V1;
+        L2_fu_V2 = L2_V2;
+        L2_fu_V3 = L2_V3;
+        L2_fu_V1_valid = L2_V1_valid;
+        L2_fu_V2_valid = L2_V2_valid;
+        L2_fu_V3_valid = L2_V3_valid;
+    end
+    
     logic [31:0] L2_mem_data_in;
     RS_tag_type L2_CDB_tag;
     logic [31:0] L2_CDB_val;
@@ -260,7 +287,7 @@ module OTTER_MCU(input CLK,
     logic L2_memRead;
     logic L2_mem_sign;
     logic [1:0] L2_mem_size;
-    LoadUnit Load2(.V1(L2_V1), .V2(L2_V2), .V1_valid(L2_V1_valid), .V2_valid(L2_V2_valid), .rd_tag(L2_rd_tag), .mem_type(L2_mem_type), 
+    LoadUnit Load2(.V1(L2_fu_V1), .V2(L2_fu_V2), .V1_valid(L2_fu_V1_valid), .V2_valid(L2_fu_V2_valid), .rd_tag(L2_rd_tag), .mem_type(L2_mem_type), 
                    .mem_resp(L2_mem_resp), .mem_resp_valid(L2_mem_resp_valid), .mem_data_in(L2_mem_data_in), .MEM_READ(L2_memRead), .CDB_val(L2_CDB_val), 
                    .CDB_tag(L2_CDB_tag), .done(L2_done), .MEM_ADDR2(L2_mem_addr_2), .MEM_SIGN(L2_mem_sign), .MEM_SIZE(L2_mem_size));
     
@@ -338,9 +365,21 @@ module OTTER_MCU(input CLK,
                                         .V2(ALU1_V2), .V3(ALU1_V3), .V1_valid(ALU1_V1_valid), .V2_valid(ALU1_V2_valid), .V3_valid(ALU1_V3_valid),
                                         .rd_tag(ALU1_rd_tag), .mem_type(ALU1_mem_type), .alu_fun(ALU1_alu_fun));
     
+    logic ALU1_fu_V1_valid,ALU1_fu_V2_valid;
+    logic [31:0] ALU1_fu_V1, ALU1_fu_V2;
+    always_ff @(posedge CLK)
+    begin
+        ALU1_fu_V1 = ALU1_V1;
+        ALU1_fu_V2 = ALU1_V2;
+        
+        ALU1_fu_V1_valid = ALU1_V1_valid;
+        ALU1_fu_V2_valid = ALU1_V2_valid;
+    end
+    
+    
     logic [31:0] ALU1_CDB_val;
     RS_tag_type ALU1_CDB_tag;
-    OTTER_ALU ALU1(.V1(ALU1_V1), .V2(ALU1_V2), .V1_valid(ALU1_V1_valid), .V2_valid(ALU1_V2_valid), .alu_fun(ALU1_alu_fun), .rd_tag(ALU1_rd_tag), 
+    OTTER_ALU ALU1(.V1(ALU1_fu_V1), .V2(ALU1_fu_V2), .V1_valid(ALU1_fu_V1_valid), .V2_valid(ALU1_fu_V2_valid), .alu_fun(ALU1_alu_fun), .rd_tag(ALU1_rd_tag), 
                    .CDB_val(ALU1_CDB_val), .CDB_tag(ALU1_CDB_tag), .done(ALU1_done));
     
     
@@ -356,12 +395,25 @@ module OTTER_MCU(input CLK,
                                         .V2(ALU2_V2), .V3(ALU2_V3), .V1_valid(ALU2_V1_valid), .V2_valid(ALU2_V2_valid), .V3_valid(ALU2_V3_valid),
                                         .rd_tag(ALU2_rd_tag), .mem_type(ALU2_mem_type), .alu_fun(ALU2_alu_fun));
     
+    
+    logic ALU2_fu_V1_valid,ALU2_fu_V2_valid;
+    logic [31:0] ALU2_fu_V1, ALU2_fu_V2;
+    always_ff @(posedge CLK)
+    begin
+         ALU2_fu_V1 = ALU2_V1;
+         ALU2_fu_V2 = ALU2_V2;
+        
+        ALU2_fu_V1_valid = ALU2_V1_valid;
+        ALU2_fu_V2_valid = ALU2_V2_valid;
+    end
+    
+    
     logic [31:0] ALU2_CDB_val;
     RS_tag_type ALU2_CDB_tag;
-    OTTER_ALU ALU2(.V1(ALU2_V1), 
-                    .V2(ALU2_V2), 
-                    .V1_valid(ALU2_V1_valid), 
-                    .V2_valid(ALU2_V2_valid), 
+    OTTER_ALU ALU2(.V1(ALU2_fu_V1), 
+                    .V2(ALU2_fu_V2), 
+                    .V1_valid(ALU2_fu_V1_valid), 
+                    .V2_valid(ALU2_fu_V2_valid), 
                     .alu_fun(ALU2_alu_fun), 
                     .rd_tag(ALU2_rd_tag), 
                    .CDB_val(ALU2_CDB_val), 

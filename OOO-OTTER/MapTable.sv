@@ -34,7 +34,7 @@ module MapTable(
     output RS_tag_type T1, T2, T3, // tags for the RS, T3 holds rs2 data tag for stores
     output [31:0] reg_data, // data to write to reg file
     output [4:0] writeReg_addr, // register # to write to in reg file
-    output reg_valid, // enable for writing to reg file
+    output reg_valid // enable for writing to reg file
 );
         
     MTEntry_type map_table [31:0];

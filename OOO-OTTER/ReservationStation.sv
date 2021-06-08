@@ -18,11 +18,13 @@ module ReservationStation #(parameter RS_TAG = INVALID) (
    output RS_tag_type rd_tag, // specify to FU where register result needs to go to
 //   output [31:0] rs2_data, // need to send rs2 data to the store unit
    output [2:0] mem_type,
-   output [3:0] alu_fun // output function to ALU
+   output [3:0] alu_fun, // output function to ALU
+   output ALL_VALID
 );
     
     // intermediate outputs
     logic busy;
+    logic all_valid;
     logic [31:0] v1, v2, v3;
     logic v1_valid, v2_valid, v3_valid;
     task_t curr_task;
@@ -98,8 +100,12 @@ module ReservationStation #(parameter RS_TAG = INVALID) (
             v3 = cdb_in.data;
         end
         if (!busy) v3_valid = 0;
+        
+        if (v1_valid && v2_valid && v3_valid) all_valid = 1;
+        else all_valid = 0;
     end
     
+    assign ALL_VALID = all_valid;
     assign V1 = v1;
     assign V1_valid = v1_valid;
     assign V2 = v2;
