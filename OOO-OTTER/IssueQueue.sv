@@ -104,7 +104,12 @@ module IssueQueue(
             end
         endcase
         
-        if (!stall) dispatch_task = task_queue.pop_front();  
+        if (!stall) dispatch_task = task_queue.pop_front();
+        else 
+        begin
+            rs = INVALID;  
+            task_queue.push_front(task_queue[0]);
+        end
     end
     
     assign DISPATCH_TASK = dispatch_task;

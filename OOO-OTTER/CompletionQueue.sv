@@ -63,7 +63,7 @@ module CompletionQueue( // Store does not broadcast to the CDB
         in4.data = DATA_IN4;
     end
     
-    always_ff @(posedge CLK) // add to completion queue
+    always_ff @(negedge CLK) // add to completion queue
     begin
         if (TAG_IN1 != INVALID) completion_queue.push_back(in1);
         if (TAG_IN2 != INVALID) completion_queue.push_back(in2);

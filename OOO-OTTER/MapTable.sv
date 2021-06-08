@@ -34,7 +34,7 @@ module MapTable(
     output RS_tag_type T1, T2, T3, // tags for the RS, T3 holds rs2 data tag for stores
     output [31:0] reg_data, // data to write to reg file
     output [4:0] writeReg_addr, // register # to write to in reg file
-    output reg_valid // enable for writing to reg file
+    output reg_valid, // enable for writing to reg file
 );
         
     MTEntry_type map_table [31:0];
@@ -52,10 +52,14 @@ module MapTable(
         
     end
     
+    // FIX LOAD => ALU TAG SWITCH CHANGE HERE
     always_ff @(posedge CLK) // map destination register of issued task in map table
     begin
-        map_table[rd_addr].tag = issue_tag;
-        map_table[rd_addr].busy = 1;
+        if (map_table[rd_addr].busy != 1)
+        begin
+            map_table[rd_addr].tag = issue_tag;
+            map_table[rd_addr].busy = 1;
+        end
     end
     
     always_comb // send V1,V2 tags if needed
@@ -67,7 +71,7 @@ module MapTable(
     end
     
     // Comparator to send data to reg file
-    always_ff @(posedge CLK)
+    always_ff @(negedge CLK)
     begin
         reg_valid_inter = 0;
         for (int i =0; i < 32; i++)
