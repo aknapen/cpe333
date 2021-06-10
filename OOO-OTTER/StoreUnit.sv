@@ -31,7 +31,7 @@ module StoreUnit(
     output logic done,
     output logic [31:0] MEM_ADDR2,
     output logic MEM_WRITE,
-    output logic MEM_WRITE_DATA,
+    output logic [31:0] MEM_WRITE_DATA,
     output logic MEM_SIGN,
     output logic [1:0] MEM_SIZE
     );

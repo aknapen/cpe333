@@ -277,7 +277,7 @@ module OTTER_MCU(input CLK,
                                            .V2(S1_V2), .V3(S1_V3), .V1_valid(S1_V1_valid), .V2_valid(S1_V2_valid), .V3_valid(S1_V3_valid),
                                            .rd_tag(S1_rd_tag), .mem_type(S1_mem_type), .alu_fun(S1_alu_fun));
     
-    logic [4:0] S1_mem_addr_2;
+    logic [31:0] S1_mem_addr_2;
     logic S1_mem_write;
     logic [31:0] S1_mem_write_data;
     logic S1_mem_sign;
@@ -299,7 +299,7 @@ module OTTER_MCU(input CLK,
                                            .V2(S2_V2), .V3(S2_V3), .V1_valid(S2_V1_valid), .V2_valid(S2_V2_valid), .V3_valid(S2_V3_valid),
                                            .rd_tag(S2_rd_tag), .mem_type(S2_mem_type), .alu_fun(S2_alu_fun));
                                            
-    logic [4:0] S2_mem_addr_2;
+    logic [31:0] S2_mem_addr_2;
     logic S2_mem_write;
     logic [31:0] S2_mem_write_data;
     logic S2_mem_sign;

@@ -502,7 +502,7 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
     end
     
     integer i,j;
-    always_ff @(posedge MEM_CLK) begin
+    always_ff @(negedge MEM_CLK) begin // complete writes on negedge for timing
         if(MEM_WRITE_S1)
         begin
             j=0;
@@ -535,7 +535,7 @@ module OTTER_mem_dualport(MEM_CLK,MEM_ADDR1,MEM_ADDR2,MEM_DIN2,MEM_WRITE2,MEM_RE
     end
     
     integer k,m;
-    always_ff @(posedge MEM_CLK) begin
+    always_ff @(negedge MEM_CLK) begin // complete writes on negedge for timing
         if(MEM_WRITE_S2)
         begin
             m=0;
